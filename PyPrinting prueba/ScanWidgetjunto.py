@@ -1,211 +1,5 @@
-﻿# %%
-""" Programa para Printing!!"""
+﻿# %% ScanWidget
 
-import os
-import tkinter as tk
-from tkinter import filedialog
-
-import numpy as np
-import time
-
-import matplotlib.pyplot as plt
-
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-import pyqtgraph.ptime as ptime
-from pyqtgraph.dockarea import Dock, DockArea
-
-from PIL import Image
-
-from scipy import ndimage
-from scipy import optimize
-
-import re
-
-import nidaqmx
-from pipython import GCSDevice
-
-# %%
-device = nidaqmx.system.System.local().devices['Dev1']
-
-AOchans = [0, 1]  # TODO: flipper 0 y 1. No estan configurados
-
-detectModes = ['PD']
-scanModes = ['ramp scan', 'step scan']
-PDchans = [0, 1, 2]  # elegir aca las salidas analog del PD de cada color
-shutters = ['532 (verde)', '640 (rojo)', '405 (azul)', '808(NIR)']  # salidas 9,10,11,??
-shutterschan = [9, 10, 11, 12]  # las salidas digitales de cada shutter
-# TODO: puse la salida 12 es la del nuevo shutter del 808. puede ser otra.
-
-apdrate = 10**5  # TODO: ver velocidad del PD... 5kH dicen
-
-PD_channels = {shutters[0]: 0, shutters[1]: 1, shutters[2]: 2, shutters[3]: 1}
-
-
-
-pi_device = GCSDevice ()  # Load PI Python Libraries  (thanks Physik Instrumente)
-#pi_device.EnumerateUSB()
-try:
-    pi_device.ConnectUSB ('0111176619')  # Connect to the controller via USB with serial number 0111176619
-    print(pi_device.qIDN()) #Out[]: 'Physik Instrumente, E-517, 0111176619, V01.243'
-    axes = ['A','B','C']
-    allTrue = [True, True, True]
-    pi_device.ONL([1,2,3],[1,1,1])  # Turn on the Online config (PC master)
-    pi_device.DCO(axes, allTrue)  # Turn on the drift compensation mode
-    pi_device.SVO (axes, allTrue)  # Turn on servo control
-    pi_device.VCO(axes, [False, False, False])  # Turn off Velocity control. Can't move if ON
-    
-    pi_device.MOV(['A', 'B', 'C'], [80, 80, 80])  # move away from origin (0,0,0)
-    #TOsDO: no necesita estar esto aca. Puedo sacarlo o no
-except IOError as e:
-    print("I/O error({0}): {1}".format(e.errno, e.strerror))
-    print("No conecta con la platina!!!")
-
-servo_time = 0.000040  # seconds  # tiempo del servo: 40­µs. lo dice qGWD()
-
-# %% Main Window
-class MainWindow(QtGui.QMainWindow):
-#TOsDO: Cartel para preguntar si estas seguro que queres salir
-    def closeEvent(self, event):
-        reply = QtGui.QMessageBox.question(self, 'Quit', 'Are u Sure to Quit?',
-                                           QtGui.QMessageBox.No |
-                                           QtGui.QMessageBox.Yes)
-        if reply == QtGui.QMessageBox.Yes:
-            print("YES")
-            event.accept()
-            self.close()
-            self.form_widget.liveviewStop()
-            pi_device.CloseConnection()
-
-        else:
-            event.ignore()
-            print("NOOOO")
-
-    def newCall(self):
-        print('New')
-
-    def openCall(self):
-        namebien = (self.form_widget.NameDirValue.text()).replace("/", "\\")
-        os.startfile(namebien)
-#        os.startfile(self.file_path)
-        print('Open: ', self.file_path)
-
-    def exitCall(self):
-        self.closeEvent()  # ver si anda así.
-
-    def localDir(self):
-        print('poner la carpeta donde trabajar')
-        root = tk.Tk()
-        root.withdraw()
-
-        file_path = filedialog.askdirectory()
-        if not file_path:
-            print("No elegiste nada")
-        else:
-            self.file_path = file_path
-            print("direccion elegida: \n", self.file_path, "\n")
-            self.form_widget.NameDirValue.setText(self.file_path)
-            self.form_widget.NameDirValue.setStyleSheet(" background-color: ")
-    #        self.form_widget.paramChanged()
-
-# TODO: para que sea mas parecido al labview le puedo poner toda la direccion \
-# donde guardar; asi no lo pregunta
-
-    def create_daily_directory(self):
-        root = tk.Tk()
-        root.withdraw()
-
-        file_path = filedialog.askdirectory()
-        if not file_path:
-            print("No elegiste ==> No crea la carpeta")
-        else:
-            timestr = time.strftime("%Y-%m-%d")  # -%H%M%S")
-
-            newpath = file_path + "/" + timestr
-            if not os.path.exists(newpath):
-                os.makedirs(newpath)
-                print("Carpeta creada!")
-            else:
-                print("Ya existe esa carpeta")
-            self.file_path = newpath
-            self.form_widget.NameDirValue.setText(self.file_path)
-            self.form_widget.NameDirValue.setStyleSheet(" background-color: ;")
-
-    def save_docks(self):  # Funciones para acomodar los Docks
-        self.form_widget.state = self.form_widget.dockArea.saveState()
-
-    def load_docks(self):
-        self.form_widget.dockArea.restoreState(self.form_widget.state)
-
-    def __init__(self):
-        QtGui.QMainWindow.__init__(self)
-
-        # TODO: Poner toda la ruta hasta la carpeta donde guarda: os.makedirs(newpath)
-        self.file_path = os.path.abspath("")  # direccion actual. Se puede poner C://Julian etc...
-        self.setWindowTitle("PIPrintingPy")  # Nombre de la ventana
-
-    # Create new action
-        openAction = QtGui.QAction(QtGui.QIcon('open.png'), '&Open Dir', self)
-        openAction.setShortcut('Ctrl+O')  # que sea .png no que que logra...
-        openAction.setStatusTip('Open document')
-        openAction.triggered.connect(self.openCall)
-
-    # Create exit action
-        exitAction = QtGui.QAction(QtGui.QIcon('exit.png'), '&Exit', self)
-        exitAction.setShortcut('Ctrl+Q')
-        exitAction.setStatusTip('Exit application')
-        exitAction.triggered.connect(self.exitCall)
-
-    # Create de file location action
-        localDirAction = QtGui.QAction(QtGui.QIcon('Dir.png'), '&Select Dir', self)
-        localDirAction.setStatusTip('Select the work folder')
-        localDirAction.setShortcut('Ctrl+S')
-        localDirAction.triggered.connect(self.localDir)
-
-    # Create de create daily directory action
-        dailyAction = QtGui.QAction(QtGui.QIcon('Daily_directory.png'), '&Create daily Dir', self)
-        dailyAction.setStatusTip('Create the work folder')
-        dailyAction.setShortcut('Ctrl+D')
-        dailyAction.triggered.connect(self.create_daily_directory)
-
-    # Create de create daily directory action
-        save_docks_Action = QtGui.QAction(QtGui.QIcon('algo.png'), '&Save Docks', self)
-        save_docks_Action.setStatusTip('Saves the Actual Docks configuration')
-        save_docks_Action.setShortcut('Ctrl+p')
-        save_docks_Action.triggered.connect(self.save_docks)
-
-    # Create de create daily directory action
-        load_docks_Action = QtGui.QAction(QtGui.QIcon('algo.png'), '&Restore Docks', self)
-        load_docks_Action.setStatusTip('Load a previous Docks configuration')
-        load_docks_Action.setShortcut('Ctrl+l')
-        load_docks_Action.triggered.connect(self.load_docks)
-
-    # Create menu bar and add action
-        menuBar = self.menuBar()
-        fileMenu = menuBar.addMenu('&File')
-        fileMenu.addAction(localDirAction)
-        fileMenu.addAction(openAction)
-        fileMenu.addAction(dailyAction)
-        fileMenu.addAction(exitAction)
-
-        fileMenu2 = menuBar.addMenu('&Docks config')
-        fileMenu2.addAction(save_docks_Action)
-        fileMenu2.addAction(load_docks_Action)
-#        fileMenu3 = menuBar.addMenu('&Local Folder')
-#        fileMenu3.addAction(localDiraction)
-        fileMenu4 = menuBar.addMenu('&<--Selecciono la carpeta desde aca!')
-        fileMenu4.addAction(openAction)
-
-        self.form_widget = ScanWidget(self, device)
-        self.setCentralWidget(self.form_widget)
-        self.setGeometry(10, 40, 600, 550)  # (PosX, PosY, SizeX, SizeY)
-        self.save_docks()
-
-#        self.umbralEdit = self.form_widget.umbralEdit
-        self.grid_traza_control = True  # lo usa la traza
-
-
-# %% ScanWidget
 class ScanWidget(QtGui.QFrame):
 
     def __init__(self, main, device, *args, **kwargs):  # agregue device
@@ -2121,14 +1915,9 @@ class ScanWidget(QtGui.QFrame):
 
         print("paso go to maximun")
         self.move_z(z_vector[np.where(z_profile_vuelta == z_max)[0][0]])
-        plt.plot(z_vector, z_profile_ida, label = "ida")
-        plt.plot(z_vector, z_profile_vuelta, 'r', label= "vuelta")
+        plt.plot(z_vector, z_profile_ida)
+        plt.plot(z_vector, z_profile_vuelta, 'r')
         plt.plot(z_vector, algomax, '.m')
- 
-        plt.xlabel('z position [µm]')
-        plt.ylabel(' PD [V]')
-        plt.title("go to maximun")
-        plt.legend()
         plt.show()
 
     def focus_openshutter(self):
@@ -2139,9 +1928,9 @@ class ScanWidget(QtGui.QFrame):
                 self.focus_shutterabierto = shutters[i]
 
     def z_vector_create(self):
-        Npasos = 128  # El mismo Npasos de gotomax # TODO: algun numero de pasos a definir (50 dice en algun lado)
-        z_start = float(self.zLabel.text()) - 15  # algun rango a barrer en um
-        z_end = float(self.zLabel.text()) + 15
+        Npasos = self.numberofPixels  # El mismo Npasos de gotomax # TODO: algun numero de pasos a definir (50 dice en algun lado)
+        z_start = float(self.zLabel.text()) - 30  # algun rango a barrer
+        z_end = float(self.zLabel.text()) + 30
         if z_start < 0:
             z_start = 0
         if z_end > 200:
@@ -2154,7 +1943,9 @@ class ScanWidget(QtGui.QFrame):
         z_antes = float(self.zLabel.text())  # guardo donde estaba
         self.z_vector = self.z_vector_create()
 
-        self.z_profile, self.z_profilevuelta = self.focus__rampas(self.z_vector)
+    # TODO: averiguar que hace y/o cuanto tarda labview
+
+        self.z_profile = self.focus__rampas(self.z_vector)
 #        self.z_profile = z_profiles[PD_channels[color]]
         self.locked_focus = True
 
@@ -2185,7 +1976,7 @@ class ScanWidget(QtGui.QFrame):
         nciclos=1
         pi_device.WGC(3, nciclos)
 
-        pi_device.WOS(3,z_vector[0])  # aditional offset needed
+        pi_device.WOS(3,0)  # aditional offset = 0
 
         Nspeed = np.ceil(int(Npasos / 10))
         Npoints = int((Npasos + (Nspeed*2))*2)
@@ -2238,22 +2029,34 @@ class ScanWidget(QtGui.QFrame):
         if self.locked_focus:
             tiempo_autocorr_tic = ptime.time()
 
+            Npasos = len(self.z_vector)
+            Ncorrelations = 6  # TODO: a definir.... 50?  # quizas no
+            new_profileida = np.zeros((Ncorrelations, Npasos))
+            new_profilevuelta = np.zeros((Ncorrelations, Npasos))
+            z_vector_corr = np.zeros((Ncorrelations, Npasos))
+            correlations = np.zeros((Npasos))
+            maxcorr = np.zeros(Ncorrelations)
+            meancorr = np.zeros(Ncorrelations)
             z_profile_lock = self.z_profile
 
-            new_profileida, new_profilevuelta = self.focus__rampas(self.z_vector)
-            correlation = np.correlate(new_profileida, z_profile_lock, "same")
-            indicemax = np.argmax(correlation)
+            for j in range(Ncorrelations):
+                z_vector_corr[j, :] = self.z_vector - (Ncorrelations/2) + j
+                new_profileida[j,:], new_profilevuelta[j,:] = self.focus__rampas(z_vector_corr[j,:])
+                correlations[:] = np.correlate(new_profileida[j,:],
+                                               z_profile_lock, "same")
+                maxcorr[j] = np.max(correlations)
+                meancorr[j] = np.mean(correlations)
+            print(maxcorr, meancorr, "maximo y medio Corr")
+            j_final = (np.where(maxcorr == np.max(maxcorr))[0][0])
+            z_max = np.max(new_profileida[j_final, :])
+            donde_z_max = np.where(new_profileida[j_final, :] == z_max)
 
-            self.move_z(self.z_vector[indicemax])
+            self.move_z(z_vector_corr[j_final, donde_z_max])
 
             tiempo_autocorr_toc = ptime.time()
             print("tiempo_autocorr_toc", tiempo_autocorr_toc-tiempo_autocorr_tic)
 
         else:
-            QtGui.QMessageBox.question(self,
-                                       'Autocorrelacion',
-                                       'No esta lockeado el foco!',
-                                       QtGui.QMessageBox.Ok)
             print("¡¡No esta Lockeado el foco!!")
             self.focus_lock_button.setStyleSheet(
                     "QPushButton { background-color: red; }"
@@ -2315,7 +2118,7 @@ class ScanWidget(QtGui.QFrame):
             QComboBox.setStyleSheet("QComboBox{color: rgb(0,0,255);}\n")
         elif QComboBox .currentText() == shutters[2]: # azul
             QComboBox.setStyleSheet("QComboBox{color: rgb(100,0,0);}\n")
-
+            
 # %% Point scan , que ahora es traza
 
     def traza_start(self):
@@ -2332,307 +2135,3 @@ class ScanWidget(QtGui.QFrame):
         self.w = MyPopup_traza(self.main, self)
         self.w.setGeometry(QtCore.QRect(750, 50, 450, 600))
         self.w.show()
-
-
-class MyPopup_traza(QtGui.QWidget):
-    """ new class to create a new window for the trace menu"""
-
-    def closeEvent(self, event):
-        self.stop()
-        print("Paró y cerró la traza")
-
-    def __init__(self, main, ScanWidget, *args, **kwargs):
-        QtGui.QWidget.__init__(self)
-        super().__init__(*args, **kwargs)
-        self.main = main
-        self.ScanWidget = ScanWidget  # call ScanWidget
-        self.traza_Widget2 = pg.GraphicsLayoutWidget()
-        self.running = False
-        grid = QtGui.QGridLayout()
-        self.setLayout(grid)
-
-        self.p6 = self.traza_Widget2.addPlot(row=2, col=1, title="Traza")
-        self.p6.showGrid(x=True, y=True)
-        self.curve = self.p6.plot(open='y')
-        self.line = self.p6.plot(open='y')
-        self.line1 = self.p6.plot(open='y')
-        self.line2 = self.p6.plot(open='y')
-
-    #  buttons: play button
-        self.play_pause_Button = QtGui.QPushButton('► Play / Pause || (F1)')
-        self.play_pause_Button.setCheckable(True)
-        self.play_pause_Button.clicked.connect(self.play_pause)
-        self.play_pause_Button.setToolTip('Pausa y continua la traza (F1)')
-
-    # Stop button
-        self.stop_Button = QtGui.QPushButton('◘ Stop (F2)')
-        self.stop_Button.setCheckable(False)
-        self.stop_Button.clicked.connect(self.stop)
-        self.stop_Button.setToolTip('Para la traza (F2)')
-
-    # save button
-        self.save_Button = QtGui.QPushButton('plot and/or save')
-        self.save_Button.setCheckable(False)
-        self.save_Button.clicked.connect(self.save_traza)
-        self.save_Button.setToolTip('Para Guardar la traza(tambien la plotea)')
-        self.save_Button.setStyleSheet(
-                "QPushButton { background-color: rgb(200, 200, 10); }"
-                "QPushButton:pressed { background-color: blue; }")
-
-    # umbral
-
-        umbralEdit = self.ScanWidget.umbralEdit
-        self.umbral = float(umbralEdit.text())
-
-        self.PointLabel = QtGui.QLabel('<strong>0.00|0.00')
-        grid.addWidget(self.traza_Widget2,      0, 0, 1, 7)
-        grid.addWidget(self.play_pause_Button,  1, 0)
-        grid.addWidget(self.stop_Button,        1, 1)
-        grid.addWidget(self.PointLabel,         1, 5)
-        grid.addWidget(self.save_Button,        1, 6)
-        self.setWindowTitle("Traza. (ESC lo cierra bien)")
-        self.play_pause_Button.setChecked(True)
-        self.PointScan()
-
-    # Atajos dentro de la traza
-        self.play_pause_Action = QtGui.QAction(self)
-        QtGui.QShortcut(
-            QtGui.QKeySequence('F1'), self, self.play_pause_active)
-
-        self.stop_Action = QtGui.QAction(self)
-        QtGui.QShortcut(
-            QtGui.QKeySequence('F2'), self, self.stop)
-
-        self.close_Action = QtGui.QAction(self)
-        QtGui.QShortcut(
-            QtGui.QKeySequence('ESC'), self, self.close_win)
-
-    def close_win(self):
-        self.stop()
-        self.close()
-
-    def play_pause_active(self):
-        '''Triggered by the play_pause_Action shortcut.'''
-        if self.play_pause_Button.isChecked():
-            self.play_pause_Button.setChecked(False)
-        else:
-            self.play_pause_Button.setChecked(True)
-        self.play_pause()
-
-    def play_pause(self):
-        if self.play_pause_Button.isChecked():
-            print("play")
-            self.traza_openshutter()
-            self.timer_inicio = ptime.time()
-            if self.running:
-                self.pointtimer.start(self.tiempo)
-            else:
-                self.PointScan()
-        else:
-            print("pause")
-            self.ScanWidget.closeShutter(self.traza_shutterabierto)
-            self.pointtimer.stop()
-
-    def stop(self):
-        print("stop")
-        self.ScanWidget.closeShutter(self.traza_shutterabierto)
-        try:
-            self.pointtimer.stop()
-        except IOError as e:
-            print("I/O error({0}): {1}".format(e.errno, e.strerror))
-        self.running = False
-        self.play_pause_Button.setChecked(False)
-        try:
-            self.pointtask.stop()
-            self.pointtask.close()
-        except:  # pass
-            print("pointtasktask no estaba abierto")
-
-    def traza_openshutter(self):
-        """ abre el shutter que se va a utilizar para imprimir"""
-        for i in range(len(shutters)):
-            if self.ScanWidget.traza_laser.currentText() == shutters[i]:
-                self.ScanWidget.openShutter(shutters[i])
-                self.traza_shutterabierto = shutters[i]
-
-    def save_traza(self, imprimiendo=False):
-        try:
-            print("va a aguardar")
-            # filepath = self.file_path
-            filepath = self.main.file_path
-            timestr = time.strftime("%d%m%Y-%H%M%S")
-            if imprimiendo:  # si viene de la rutina, guarda automatico con el numero de particula
-                timestr = str("Particula-") + str(self.ScanWidget.i_global)
-                self.ScanWidget.edit_save.setText(str(timestr))
-            name = str(filepath + "/" + timestr + "-Traza" + ".txt")
-            print("va a abrir el name")
-            f = open(name, "w")
-            np.savetxt(name,
-                       np.transpose([self.timeaxis[:self.ptr1],
-                                     self.data1[:self.ptr1]]),
-                       header="{} y umbral={:.3}".format(
-                        timestr, float(self.umbral)))
-            print("va a cerrarlo")
-            f.close()
-            print("\n Guardo la Traza")
-        except IOError as e:
-            print("I/O error({0}): {1}".format(e.errno, e.strerror))
-
-#        fig, ax = plt.subplots()
-#        plt.plot(self.timeaxis[:self.ptr1], self.data1[:self.ptr1])
-#        ax.set_xlabel('Tiempo (s) (puede fallar)')
-#        ax.set_ylabel('Intensity (V)')
-#        plt.show()
-
-    def PointScan(self):
-        self.running = True
-        self.tiempo = 1  # ms  # refresca el numero cada este tiempo
-        self.Napd = int(np.round(apdrate * self.tiempo/10**3))
-
-        self.points = np.zeros(self.Napd)
-        try:
-            self.pointtask.stop()
-            self.pointtask.close()
-        except: pass
-
-        self.pointtask = nidaqmx.Task('pointtaskPD')
-        # Configure the analog in channel to read all the PDs
-        for n in range(len(PDchans)):
-            self.pointtask.ai_channels.add_ai_voltage_chan(
-                physical_channel='Dev1/ai{}'.format(PDchans[n]),  # igual son [0,1,2]
-                name_to_assign_to_channel='chan_PD{}'.format(PDchans[n]))
-
-            self.pointtask.timing.cfg_samp_clk_timing(
-              rate=apdrate,  # TODO: ver velocidad PD...
-              sample_mode=nidaqmx.constants.AcquisitionType.FINITE,
-              source=r'100kHzTimebase',  # 1000k
-              samps_per_chan=len(self.points))
-
-        self.color_traza = self.ScanWidget.traza_laser.currentText()
-
-        self.ptr1 = 0
-        self.timeaxis = np.empty(100)
-        self.data1 = np.empty(100)
-
-    # Quiero saber cuanto tarda para que coincidan los tiempos (ni así anda)
-        self.tiemporeal = self.tiempo
-        tic = ptime.time()
-        self.updatePoint(prueba = True)
-        tiic = ptime.time()
-        self.tiemporeal = (tiic-tic)*2
-        print("tiempo propuesto=", self.tiempo*10**3, "ms")
-        print("tiempo real=", self.tiemporeal*10**3, "ms")
-
-        self.ptr1 = 0
-        self.timeaxis = np.empty(100)
-        self.data1 = np.empty(100)
-
-        self.traza_openshutter()
-        self.timer_inicio = ptime.time()
-        self.pointtimer = QtCore.QTimer()
-        self.pointtimer.timeout.connect(self.updatePoint)
-        self.pointtimer.start(self.tiemporeal)
-
-    def updatePoint(self, prueba = False):
-
-        N = len(self.points)
-        lectura_total = self.pointtask.read(N)
-        self.points[:] = lectura_total[PD_channels[self.color_traza]][:]
-
-        m = np.mean(self.points)
-
-        self.timeaxis[self.ptr1] = self.ptr1 * self.tiemporeal  # *self.tiempo
-        self.data1[self.ptr1] = m
-        self.ptr1 += 1
-        if self.ptr1 >= self.data1.shape[0]:
-            tmpdata1 = self.data1
-            self.data1 = np.empty(self.data1.shape[0] * 2)
-            self.data1[:tmpdata1.shape[0]] = tmpdata1
-            tmptime = self.timeaxis
-            self.timeaxis = np.empty(self.timeaxis.shape[0] * 2)
-            self.timeaxis[:tmptime.shape[0]] = tmptime
-
-        self.curve.setData(self.timeaxis[:self.ptr1], self.data1[:self.ptr1],
-                           pen=pg.mkPen('y', width=1),
-                           shadowPen=pg.mkPen('w', width=3))
-
-        M = 10
-        M2 = 10
-        if self.ptr1 < M:
-            mediochico = np.mean(self.data1[:self.ptr1])
-            self.timeaxis2 = self.timeaxis[:self.ptr1]
-            if self.ptr1 < M2:
-                mediochico2 = np.mean(self.data1[:self.ptr1])
-            else:
-                mediochico2 = np.mean(self.data1[:self.ptr1-M2])
-        else:
-            mediochico = np.mean(self.data1[self.ptr1-M:self.ptr1])
-            mediochico2 = np.mean(self.data1[self.ptr1-M-M2:self.ptr1-M2])
-
-        self.PointLabel.setText("<strong>{:.3}|{:.3}".format(
-                                float(mediochico), float(mediochico2)))
-
-        if abs(mediochico) >= abs(mediochico2)*float(self.umbral):
-            self.PointLabel.setStyleSheet(" background-color: orange")
-        else:
-            self.PointLabel.setStyleSheet(" background-color: ")
-
-        if prueba:  # solo si es la pasada de prueba
-            self.timer_inicio = ptime.time()
-
-    # Este if not es el que define si se esta corriendo una grilla
-        if not self.main.grid_traza_control:
-            if abs(mediochico) > abs(mediochico2)*float(self.umbral) or (ptime.time() - self.timer_inicio) > float(self.ScanWidget.tmaxEdit.text()):
-                print("medio=", np.round(mediochico), np.round(mediochico2))
-                self.closeShutter(self.color_traza)
-                self.save_traza(True)
-                self.stop()
-                self.close_win()
-                self.main.grid_traza_control = True
-
-
-# %% Otras Funciones
-def gaussian(height, center_x, center_y, width_x, width_y):
-    """Returns a gaussian function with the given parameters"""
-    width_x = float(width_x)
-    width_y = float(width_y)
-    return lambda x, y: height*np.exp(
-                -(((center_x-x)/width_x)**2+((center_y-y)/width_y)**2)/2)
-
-
-def moments(data):
-    """Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution by calculating its
-    moments """
-    total = data.sum()
-    X, Y = np.indices(data.shape)
-    x = (X*data).sum()/total
-    y = (Y*data).sum()/total
-    col = data[:, int(y)]
-    width_x = np.sqrt(np.abs((np.arange(col.size)-y)**2*col).sum()/col.sum())
-    row = data[int(x), :]
-    width_y = np.sqrt(np.abs((np.arange(row.size)-x)**2*row).sum()/row.sum())
-    height = data.max()
-    return height, x, y, width_x, width_y
-
-
-def fitgaussian(data):
-    """Returns (height, x, y, width_x, width_y)
-    the gaussian parameters of a 2D distribution found by a fit"""
-    params = moments(data)
-    errorfunction = lambda p: np.ravel(gaussian(*p)(*np.indices(data.shape)) -
-                                       data)
-    p, success = optimize.leastsq(errorfunction, params)
-    return p
-
-
-def find_nearest(array, value):
-    idx = (np.abs(array-value)).argmin()
-    return array[idx]
-# %% FIN
-app = QtGui.QApplication([])
-#win = ScanWidget(device)
-win = MainWindow()
-win.show()
-
-app.exec_()
