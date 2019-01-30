@@ -45,7 +45,7 @@ pi_device.qVCO()
 #%%
 # pregunto la posicion de todos los canales. muevo el x y pregunto de nuevo
 pi_device.qPOS()
-pi_device.MOV ('A', 1.5)	# Command axis "A" to position 1.5
+pi_device.MOV(['A', 'B', 'C'], [40, 40, 40])  # move away from origin (0,0,0)
 
 pi_device.qPOS()
 
@@ -244,11 +244,73 @@ pi_device.MOV('B', y_init_pos)
 print( "tiempo total", time.time()-tiic)
 
 #%%
-pi_device.qPOS()
+pi_device.CloseConnection()
 # %%
 
 
+x_init_pos = pi_device.qPOS()['A']
+y_init_pos = pi_device.qPOS()['B']
+#%%
+wtrtime =1000
+pi_device.WTR(1, wtrtime, 0)
+pi_device.WTR(2, wtrtime, 0)
+nciclos=1
+pi_device.WGC(1, nciclos)
+pi_device.WGC(2, nciclos)
 
+
+Npoints= 32
+Nrampa = Npoints
+Npix = 32
+Rango = 10
+#       tabla, init, Nrampa, appen, center, speed, amplit, offset, lenght
+pi_device.WAV_RAMP(1, 1, Nrampa, "X", int(Npoints/2), 2, Rango, 0, Npoints)
+
+#       tabla, init, Nrampa, appen, speed, amplit, offset, lenght
+pi_device.WAV_LIN(2, 1, Nrampa, "X", 2, Rango/Npix, y_init_pos, Npoints)
+
+pi_device.TWC()  # Clear all triggers options
+
+pi_device.TWS([1,2,3],[1,1,1],[1,1,1])  # config a "High" signal (1) in /
+#                         point 1 from out 1, point 3 from out2 y point 5 out 3
+#pi_device.CTO(1,1,0.005)  # config param 1 (dist from trigger) un 0.005 µm from out 1
+pi_device.CTO(1,3,4)  # The digital output line 1 is set to "Generator Trigger" mode.
+#pi_device.CTO(1,4,50)  # Trigger delay (siempre es cero. no importa que pongo)
+# Descubrimos que la out 1 de aca es la que esta etiquetada como out 3
+#pi_device.CTO(1,5,0) 
+#pi_device.CTO(1,6,1) 
+pi_device.WOS(1,x_init_pos)
+#pi_device.qCTO()
+
+pi_device.WGO(1, True)
+while any(pi_device.IsGeneratorRunning().values()):
+    time.sleep(0.01)
+pi_device.WGO(1, False)
+
+#for i in range(32):
+#    tic = time.time()
+#    pi_device.WGO(1, True)
+#    while any(pi_device.IsGeneratorRunning().values()):
+#        time.sleep(0.01)
+#    pi_device.WGO(1, False)
+#    pi_device.MOV('A', x_init_pos)
+#
+#    #time.sleep(servo_time*Npoints*wtrtime)
+#    pi_device.WOS(2, i*(10/32))
+#    pi_device.WGO(2, True)
+#    while any(pi_device.IsGeneratorRunning().values()):
+#        time.sleep(0.01)
+#    pi_device.WGO(2, False)
+#
+#    while not all(pi_device.qONT().values()):
+#        print("no creo que entre a este while")
+#        time.sleep(0.01)
+#
+#pi_device.MOV('B', y_init_pos)
+print(x_init_pos)
+print(pi_device.qPOS('A'))
+#%%
+pi_device.MOV(['A', 'B', 'C'], [40, 40, 40])  # move away from origin (0,0,0)
 
 
 
