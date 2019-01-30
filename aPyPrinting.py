@@ -21,22 +21,18 @@ from scipy import ndimage
 from scipy import optimize
 
 import re
-#import tools  # ROI
-
-#import viewbox_tools  #  ROI
 
 import nidaqmx
+from pipython import GCSDevice
 
 # %%
-
 device = nidaqmx.system.System.local().devices['Dev1']
 
-activeChannels = ["x", "y", "z"]
-AOchans = [0, 1, 2]
+AOchans = [0, 1]  # TODO: flipper 0 y 1. No estan configurados
 
 detectModes = ['PD']
 scanModes = ['ramp scan', 'step scan']
-PDchans = [0, 1, 2]  # elegir aca las salidas del PD de cada color
+PDchans = [0, 1, 2]  # elegir aca las salidas analog del PD de cada color
 shutters = ['532 (verde)', '640 (rojo)', '405 (azul)', '808(NIR)']  # salidas 9,10,11,??
 shutterschan = [9, 10, 11, 12]  # las salidas digitales de cada shutter
 # TODO: puse la salida 12 es la del nuevo shutter del 808. puede ser otra.
@@ -46,7 +42,6 @@ apdrate = 10**5  # TODO: ver velocidad del PD... 5kH dicen
 PD_channels = {shutters[0]: 0, shutters[1]: 1, shutters[2]: 2, shutters[3]: 1}
 
 
-from pipython import GCSDevice
 
 pi_device = GCSDevice ()  # Load PI Python Libraries  (thanks Physik Instrumente)
 #pi_device.EnumerateUSB()
@@ -442,7 +437,8 @@ class ScanWidget(QtGui.QFrame):
         self.shutter3button.setToolTip('Open/close IR 808 Shutter')
 
         self.power_check = QtGui.QCheckBox('Potencia')
-#        self.power_check.setChecked(False)  # TODO: NO esta conectado a nada!
+#        self.power_check.setChecked(False)  # TODO: No esta conectado al flipper.
+#        self.power_check.clicked.connect(self.flipper0/1) # funcion flipper?
         self.power_check.clicked.connect(self.power_change)
         self.power_check.setToolTip('Picado es baja, no picado es alta')
         self.power_change()
@@ -654,7 +650,7 @@ class ScanWidget(QtGui.QFrame):
         self.imagecheck = QtGui.QCheckBox('Image change')
         self.imagecheck.clicked.connect(self.imageplot)
         self.imagecheck.setStyleSheet(" color: red; ")
-        self.imagecheck.setToolTip('Switch between the images of each apd')
+        self.imagecheck.setToolTip('Switch between the images FWd and BWD')
 
     # useful Booleans
         self.channelramp = False  # canales
@@ -719,10 +715,6 @@ class ScanWidget(QtGui.QFrame):
         self.numberofPixelsEdit.textEdited.connect(self.PixelSizeChange)
         self.pixelSizeValue.textEdited.connect(self.NpixChange)
         self.scanRangeEdit.textEdited.connect(self.PixelSizeChange)
-
-        self.actualizar = QtGui.QLineEdit('0.5')
-
-# TODO: Borrar ROI y presets
 
     # Defino el tipo de laser que quiero para imprimir
         self.scan_laser = QtGui.QComboBox()
@@ -798,19 +790,17 @@ class ScanWidget(QtGui.QFrame):
 
 
     # Columna 3
-        subgrid3.addWidget(self.ROIButton,            0, 3)
-        subgrid3.addWidget(self.selectROIButton,      1, 3)
+        subgrid3.addWidget(QtGui.QLabel(""),          0, 3)
+
         subgrid3.addWidget(QtGui.QLabel(""),          2, 3)
-        subgrid3.addWidget(self.ROIlineButton,        3, 3)
-        subgrid3.addWidget(self.selectlineROIButton,  4, 3)
+
         subgrid3.addWidget(QtGui.QLabel(""),          5, 3)
-        subgrid3.addWidget(self.histogramROIButton,   6, 3)
+
         subgrid3.addWidget(QtGui.QLabel(""),          7, 3)
         subgrid3.addWidget(QtGui.QLabel(""),          8, 3)
-#        subgrid3.addWidget(QtGui.QLabel(""),          9, 3)
 
         subgrid3.addWidget(QtGui.QLabel(""),         11, 3)
-        subgrid3.addWidget(self.graphcheck,          12, 3)
+
         subgrid3.addWidget(self.plotLivebutton,      13, 3)
         subgrid3.addWidget(QtGui.QLabel(""),         14, 3)
         subgrid3.addWidget(self.scanMode,            15, 3)
@@ -1056,13 +1046,12 @@ class ScanWidget(QtGui.QFrame):
         self.setLayout(hbox)
 
     #  algunas cosas que ejecutan una vez antes de empezar
-        self.shuttersChannelsNidaq()  # abro el canal ahora y lo dejo abierto
+        self.shuttersChannelsNidaq()  # open a digital channel and let it open
 
         self.read_pos()  # read where it is and write in the x/y/zLabel texts
 
         self.paramChanged()
         self.PixelSizeChange()
-#        self.paramWidget.setFixedHeight(500)
 
         self.vb.setMouseMode(pg.ViewBox.RectMode)
         self.img = pg.ImageItem()
@@ -1081,7 +1070,10 @@ class ScanWidget(QtGui.QFrame):
         imageWidget.addItem(self.hist, row=1, col=2)
 
         self.PDtimer = QtCore.QTimer()
-        self.PDtimer.timeout.connect(self.PDupdate)
+        self.PDtimer.timeout.connect(self.rampupdate)
+
+        self.steptimer = QtCore.QTimer()
+        self.steptimer.timeout.connect(self.stepupdate)
 
         self.dy = 0
 
@@ -1194,8 +1186,8 @@ class ScanWidget(QtGui.QFrame):
              (float(self.xLabel.text()), float(self.yLabel.text()), float(self.zLabel.text())),
              self.scanMode.currentText()]
 
-        print("\n", a)
-        print(b, "\n")
+#        print("\n", a)
+#        print(b, "\n")
         if a != b:
             self.paramChanged()
 
@@ -1218,8 +1210,6 @@ class ScanWidget(QtGui.QFrame):
         self.initialPosition = (float(self.xLabel.text()),
                                 float(self.yLabel.text()),
                                 float(self.zLabel.text()))
-
-        self.Napd = int(np.round(apdrate * self.pixelTime))
 
         self.pixelSize = self.scanRange / self.numberofPixels
 
@@ -1258,15 +1248,17 @@ class ScanWidget(QtGui.QFrame):
             self.liveviewStop()
 
     def liveviewStart(self):
+        self.color_scan = self.scan_laser.currentText()  # aca usa el PD del color correcto
+
         if self.scanMode.currentText() == scanModes[1]:  # "step scan":
             self.channelsOpenStep()
             self.tic = ptime.time()
-#            self.steptimer.start(5)  # 100*self.pixelTime*10**3)  # imput in ms
+            self.steptimer.start((self.linetime*10**3))  # imput in ms
         else:  # "ramp scan" or "otra frec ramp" or slalom
             self.channelsOpenRamp()  # config de analog in channel for PD's
             self.tic = ptime.time()
             self.startingRamps()  # config the PI ramps (piezo platina)
-            self.PDtimer.start(self.linetime)  # imput in ms
+            self.PDtimer.start(self.linetime*10**3)  # imput in ms
 
     def liveviewStop(self):
         print("stopstopstopstopstopstop------------")
@@ -1277,8 +1269,7 @@ class ScanWidget(QtGui.QFrame):
         self.MovetoStart()
         self.dy = 0
         self.liveviewButton.setChecked(False)
-#        self.viewtimer.stop()
-#        self.steptimer.stop()
+        self.steptimer.stop()
 
         self.done()
         self.grid_scan_control = True  # es parte del flujo de grid_start
@@ -1323,9 +1314,8 @@ class ScanWidget(QtGui.QFrame):
 
 
 # %% runing Ramp loop (PD update)
-    def PDupdate(self):
+    def rampupdate(self):
 
-        color = self.scan_laser.currentText()  # aca usa el PD del color correcto
         tiic = ptime.time()
         Npoints = self.Npoints  # int((self.numberofPixels + (self.Nspeed*2))*2)
         Nmedio = int(Npoints/2)
@@ -1339,14 +1329,14 @@ class ScanWidget(QtGui.QFrame):
         pi_device.WGO(1, False)
 #        pi_device.MOV('A', self.initialPosition[0])
 
-        imgida = self.PD[PD_channels[color]][int(self.Nspeed):int(Nmedio-self.Nspeed)]
+        imgida = self.PD[PD_channels[self.color_scan]][int(self.Nspeed):int(Nmedio-self.Nspeed)]
         self.image[:, -1-self.dy] = imgida
 #        self.img.setImage(self.image, autoLevels=self.autoLevels)
 
-        imgvuelta = self.PD[PD_channels[color]][int(Nmedio+self.Nspeed):-int(self.Nspeed)]
+        imgvuelta = self.PD[PD_channels[self.color_scan]][int(Nmedio+self.Nspeed):-int(self.Nspeed)]
         self.image2[:, -1-self.dy] = imgvuelta
 
-        if self.graphcheck.isChecked():
+        if self.imagecheck.isChecked():
             self.img.setImage(self.image2, autoLevels=self.autoLevels)
         else:
             self.img.setImage(self.image, autoLevels=self.autoLevels)
@@ -1372,6 +1362,9 @@ class ScanWidget(QtGui.QFrame):
             self.PDtask.stop()
             self.MovetoStart()
             self.dy = 0
+            if self.CMcheck.isChecked():
+                self.CMmeasure()
+                self.goCM()
             if self.Continouscheck.isChecked():
                 self.liveviewStart()
             else:
@@ -1474,102 +1467,85 @@ class ScanWidget(QtGui.QFrame):
         self.channelsteps = False
 
 # %%--- Step Cosas --------------
-    """despues lo hago... o no"""
-#==============================================================================
-#     def stepLine(self):
-#         # tic = ptime.time()
-# 
-#         for i in range(self.numberofPixels):
-#             # tec = ptime.time()
-#             # self.citask.stop()
-#             self.aotask.stop()
-# 
-#             self.aotask.write(
-#              [self.allstepsx[i, self.dy] / convFactors['x'],
-#               self.allstepsy[i, self.dy] / convFactors['y']], auto_start=True)
-# #              self.allstepsz[i, self.dy] / convFactors['z']],
-# #                             auto_start=True)
-# 
-# #                self.aotask.start()
-#             self.aotask.wait_until_done()
-# 
-# #            tac = ptime.time()
-#             self.APDstep[:] = self.APD1task.read(1+self.Napd)
-#             self.APD1task.wait_until_done()
-# #            toc = ptime.time()
-# 
-#             self.APD1task.stop()
-#             self.aotask.stop()
-# #            self.cuentas[i] = aux + np.random.rand(1)[0]
-#             resta = self.APDstep[-1] - self.APDstep[0]
-#             self.image[-1-i, self.numberofPixels-1-self.dy] = resta
-# 
-# # --stepScan ---
-#     def stepScan(self):
-#         """the step clock calls this function"""
-#         self.stepLine()
-# 
-# #        self.image[:, self.numberofPixels-1-(self.dy)] = self.cuentas
-#         self.img.setImage(self.image, autoLevels=self.autoLevels)
-# 
-#         if self.dy < self.numberofPixels-1:
-#             self.dy = self.dy + 1
-#         else:
-#             if self.VideoCheck.isChecked():
-#                 self.saveFrame()  # para guardar siempre (Alan idea)
-#             print(ptime.time()-self.tic, "Tiempo imagen completa.")
-#             self.viewtimer.stop()
-#             if self.CMcheck.isChecked():
-#                 self.CMmeasure()
-#             if self.Continouscheck.isChecked():
-#                 self.liveviewStart()
-#             else:
-#                 self.MovetoStart()
-#                 self.done()
-# 
-#     def Steps(self):
-#         self.pixelsofftotal = 0
-#         self.cuentas = np.zeros((self.numberofPixels))
-# 
-# #    Barrido x: Primal signal
-# #        self.allstepsx = np.zeros((self.numberofPixels,self.numberofPixels))
-#         startX = float(self.initialPosition[0])
-#         sizeX = self.scanRange
-#         Npuntos = self.numberofPixels
-#         gox = (np.linspace(0, sizeX, Npuntos) + startX) - (self.scanRange/2)
-#         self.allstepsx = np.transpose(np.tile(gox, (self.numberofPixels, 1)))
-#     # a matrix [i,j] where i go for the complete ramp and j evolves in y lines
-# #        self.gox = gox
-# 
-# #    Barrido y: secondary signal
-#         startY = float(self.initialPosition[1])
-#         goy = np.ones(Npuntos) * startY
-#         self.allstepsy = np.zeros((self.numberofPixels, self.numberofPixels))
-#         stepy = self.scanRange / self.numberofPixels
-#         for j in range(len(self.allstepsy)):
-#             self.allstepsy[:, j] = goy + (j) * stepy
-# 
-# #    Barrido z (se queda en la posicion inicial): thirth signal (static)
-#         startZ = float(self.initialPosition[2])
-#         goz = np.ones(Npuntos) * startZ
-#         self.allstepsz = np.tile(goz, (self.numberofPixels, 1))
-# 
-#         if self.PSFMode.currentText() == 'XY normal psf':
-#             print("escaneo x y normal S")
-# 
-#         elif self.PSFMode.currentText() == 'XZ':
-#             # print("intercambio y por z S")
-#             self.allstepsz = self.allstepsy - startY + startZ  # -(sizeX/2)
-#             goy = np.ones(len(self.allstepsx)) * startY
-#             self.allstepsy = np.tile(goy, (self.numberofPixels, 1))
-# 
-#         elif self.PSFMode.currentText() == 'YZ':
-#             # print("intercambio x por y S")
-#             self.allstepsz = self.allstepsy - startY + startZ  # -(sizeX/2)
-#             self.allstepsy = self.allstepsx - startX + startY
-#             gox = np.ones(len(self.allstepsy)) * startX
-#             self.allstepsx = np.tile(gox, (self.numberofPixels, 1))
-#==============================================================================
+    def stepLine(self):
+        """ a pesar de ser Step, hago toda una linea y despues la dibujo"""
+        tic = ptime.time()
+
+        for i in range(self.numberofPixels):
+
+            pi_device.MOV('A', self.allstepsx[i, self.dy])
+            while not all(pi_device.qONT().values()):
+                time.sleep(0.01)
+
+            PDstep = self.PDtask.read(50)  # algun numero logico
+            self.PDtask.wait_until_done()
+
+            self.PDtask.stop()
+
+            valor = np.mean(PDstep[self.color_scan])
+            self.image[-1-i, self.numberofPixels-1-self.dy] = valor
+
+# --stepScan ---
+    def stepupdate(self):
+        """the step clock calls this function"""
+        self.stepLine()
+        pi_device.MOV('B', self.allstepsy[0, self.dy])
+
+        self.img.setImage(self.image, autoLevels=self.autoLevels)
+
+        while not all(pi_device.qONT().values()):
+            time.sleep(0.01)
+
+        if self.dy < self.numberofPixels-1:
+            self.dy = self.dy + 1
+        else:
+            self.steptimer.stop()
+            if self.VideoCheck.isChecked():
+                self.saveFrame()  # para guardar siempre
+            print(ptime.time()-self.tic, "Tiempo imagen completa.")
+            self.steptimer.stop()
+            if self.CMcheck.isChecked():
+                self.CMmeasure()
+                self.goCM()
+            if self.Continouscheck.isChecked():
+                self.liveviewStart()
+            else:
+                self.MovetoStart()
+                self.done()
+
+    def Steps(self):
+
+#    Barrido x: Primal signal
+        startX = float(self.initialPosition[0])
+        sizeX = self.scanRange
+        Npuntos = self.numberofPixels
+        gox = (np.linspace(0, sizeX, Npuntos) + startX)
+        self.allstepsx = np.transpose(np.tile(gox, (self.numberofPixels, 1)))
+    # a matrix [i,j] where i go for the complete ramp and j evolves in y lines
+#        self.gox = gox
+
+#    Barrido y: secondary signal
+        startY = float(self.initialPosition[1])
+        goy = np.ones(Npuntos) * startY
+        self.allstepsy = np.zeros((self.numberofPixels, self.numberofPixels))
+        stepy = self.scanRange / self.numberofPixels
+        for j in range(len(self.allstepsy)):
+            self.allstepsy[:, j] = goy + (j) * stepy
+
+    # para el XZ, YZ
+#        if self.PSFMode.currentText() == 'XY normal psf':
+#            print("escaneo x y normal S")
+#
+#        elif self.PSFMode.currentText() == 'XZ':
+#            # print("intercambio y por z S")
+#            goy = np.ones(len(self.allstepsx)) * startY
+#            self.allstepsy = np.tile(goy, (self.numberofPixels, 1))
+#
+#        elif self.PSFMode.currentText() == 'YZ':
+#            # print("intercambio x por y S")
+#            self.allstepsy = self.allstepsx - startX + startY
+#            gox = np.ones(len(self.allstepsy)) * startX
+#            self.allstepsx = np.tile(gox, (self.numberofPixels, 1))
 
 # %% ---Move----------------------------------------
     def move(self, axis, dist):
@@ -1803,7 +1779,7 @@ class ScanWidget(QtGui.QFrame):
     def plotLive(self):
         tic = ptime.time()
         rango = self.scanRange
-        texts = [getattr(self, ax + "Label").text() for ax in activeChannels]
+        texts = [getattr(self, ax + "Label").text() for ax in ["x", "y", "z"]]
         initPos = [re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", t)[0] for t in texts]
 
         x = np.linspace(0, rango, self.numberofPixels) + float(initPos[0])
@@ -1854,7 +1830,7 @@ class ScanWidget(QtGui.QFrame):
         print("\n tiempo Plotlive", toc-tic, "\n")
 
     def otroPlot(self):
-        Channels = self.activeChannels
+        Channels = ["x", "y", "z"]
         texts = [getattr(self, ax + "Label").text() for ax in Channels]
         initPos = [re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", t)[0] for t in texts]
         xv = np.linspace(0, self.scanRange,
