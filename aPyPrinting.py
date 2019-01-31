@@ -2087,7 +2087,7 @@ class ScanWidget(QtGui.QFrame):
                                        \n fin',
                                        QtGui.QMessageBox.Ok)
         else:
-            
+
             self.i_global += 1
             self.grid_continue()
 
