@@ -8,9 +8,9 @@ import time
 #import Placa
 from Placa import *
 print("aa")
-from setUpGUIarchivo import setUpGUI
+from ScanWidgetjunto import ScanWidget
 
-import scanner
+import ScanWidgetjunto
 
 class MainWindow(QtGui.QMainWindow):
 #TOsDO: Cartel para preguntar si estas seguro que queres salir
@@ -144,7 +144,7 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu4 = menuBar.addMenu('&<--Selecciono la carpeta desde aca!')
         fileMenu4.addAction(openAction)
 
-        self.form_widget = setUpGUI(self, device)
+        self.form_widget = ScanWidget(self, device)
         self.setCentralWidget(self.form_widget)
         self.setGeometry(10, 40, 600, 550)  # (PosX, PosY, SizeX, SizeY)
         self.save_docks()

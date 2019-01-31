@@ -37,8 +37,7 @@ print(device)
 import MainWindow
 
 # %% Interface Buttons
-import setUpGUIarchivo
-import scanner
+import ScanWidgetjunto
 
 #problema: como separar la clase ScanWidget
 

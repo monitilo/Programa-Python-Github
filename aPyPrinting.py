@@ -1841,15 +1841,14 @@ class ScanWidget(QtGui.QFrame):
         try:
             filepath = self.main.file_path
             # nombre con la fecha -hora
-            name = str(filepath + "/" + str(self.edit_save.text()) + ".tiff")
-            if self.imagecheck.isChecked():
-                guardado = Image.fromarray(
-                                         np.transpose(np.flip(self.image2, 1)))
-            else:
-                guardado = Image.fromarray(
-                                         np.transpose(np.flip(self.image, 1)))
+            nameida = str(filepath + "/" + "ida" + str(self.edit_save.text()) + ".tiff")
+            namevuelta = str(filepath + "/" + "vuelta_" + str(self.edit_save.text()) + ".tiff")
 
-            guardado.save(name)
+            guardadoida = Image.fromarray(np.transpose(np.flip(self.image, 1)))
+            guardadovuelta = Image.fromarray(np.transpose(np.flip(self.image2, 1)))
+
+            guardadoida.save(nameida)
+            guardadovuelta.save(namevuelta)
             self.NameNumber = self.NameNumber + 1
             self.edit_save.setText(self.edit_Name + str(self.NameNumber))
             print("\n Image saved\n")
