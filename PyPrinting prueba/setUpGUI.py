@@ -7,31 +7,27 @@ from scanner import scannerWidget
 
 class setUpGUI(QtGui.QFrame):
 
-    def __init__(self, main, device, *args, **kwargs):  # agregue device
+    def __init__(self, main, device):  # agregue device
 
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.main = main
         self.nidaq = device
         
-        self.myscan = scannerWidget(self)
+        self.myscan = scannerWidget
 # ---  COSAS DE PRINTIG!
 
     # Cosas para la rutina de imprimir. Grid
 
     # umbral
-        self.umbralLabel = QtGui.QLabel('Umbral')
         self.umbralEdit = QtGui.QLineEdit('10')
         self.umbralEdit.setFixedWidth(40)
         self.umbralEdit.setToolTip('promedios de valores nuevo/anteriores ')
-        self.umbralLabel.setToolTip('promedios de valores nuevo/anteriores ')
 
     # Tiempo de espera maximo
-        self.tmaxLabel = QtGui.QLabel('t max (s)')
         self.tmaxEdit = QtGui.QLineEdit('60')
         self.tmaxEdit.setFixedWidth(40)
         self.tmaxEdit.setToolTip('Tiempo que espera un envento. Si no, sigue')
-        self.tmaxLabel.setToolTip('Tiempo que espera un envento. Si no, sigue')
 
     # Defino el tipo de laser que quiero para imprimir
         self.grid_laser = QtGui.QComboBox()
@@ -40,13 +36,13 @@ class setUpGUI(QtGui.QFrame):
         self.grid_laser.setToolTip('Elijo el shuter para IMPRIMIR la grilla')
         self.grid_laser.setFixedWidth(80)
         self.grid_laser.activated.connect(
-                                    lambda: self.color_menu(self.grid_laser))
-        self.color_menu(self.grid_laser)
+                                    lambda: self.color_menu(self.myscan.grid_laser))
+        self.color_menu(self.myscan.grid_laser)
         grid_laser_label = QtGui.QLabel('<strong> Print Laser')
 
     # Buttons
         self.cargar_archivo_button = QtGui.QPushButton('Cargar Archivo')
-        self.cargar_archivo_button.clicked.connect(myscan.grid_read)
+        self.cargar_archivo_button.clicked.connect(self.myscan.grid_read)
         self.cargar_archivo_button.setStyleSheet(
                 "QPushButton { background-color: orange; }"
                 "QPushButton:pressed { background-color: blue; }")
@@ -55,7 +51,7 @@ class setUpGUI(QtGui.QFrame):
     # Print button. Que en realidad solo crea la carpeta
         self.imprimir_button = QtGui.QPushButton('IMPRIMIR (crea carpeta)')
         self.imprimir_button.setCheckable(True)
-        self.imprimir_button.clicked.connect(myscan.grid_create_folder)
+        self.imprimir_button.clicked.connect(self.myscan.grid_create_folder)
         self.imprimir_button.setStyleSheet(
                 "QPushButton:pressed { background-color: blue; }")
         self.imprimir_button.setToolTip('En realidad solo crea la carpeta. El mundo es una gran mentira.')
@@ -63,12 +59,12 @@ class setUpGUI(QtGui.QFrame):
 
     # desides if plot the positions in the grid to print. Just for  be sure
         self.grid_plot_check = QtGui.QCheckBox('plot_test?')
-        self.grid_plot_check.clicked.connect(myscan.grid_plot)
+        self.grid_plot_check.clicked.connect(self.myscan.grid_plot)
 
     # Print button. Que en realidad solo crea la carpeta
         self.next_button = QtGui.QPushButton('Next ►')
         self.next_button.setCheckable(False)
-        self.next_button.clicked.connect(myscan.grid_start)
+        self.next_button.clicked.connect(self.myscan.grid_start)
         self.next_button.setStyleSheet(
                 "QPushButton:pressed { background-color: blue; }")
         self.next_button.setToolTip('Empeiza o continua la grilla')
@@ -76,7 +72,7 @@ class setUpGUI(QtGui.QFrame):
     # go ref button.
         self.go_ref_button = QtGui.QPushButton('go reference')
         self.go_ref_button.setCheckable(False)
-        self.go_ref_button.clicked.connect(myscan.go_reference)
+        self.go_ref_button.clicked.connect(self.myscan.go_reference)
         self.go_ref_button.setStyleSheet(
                 "QPushButton:pressed { background-color: blue; }")
         self.go_ref_button.setToolTip('Va a la referencia seteada')
@@ -85,7 +81,7 @@ class setUpGUI(QtGui.QFrame):
     # set reference button.
         self.set_ref_button = QtGui.QPushButton('set reference')
         self.set_ref_button.setCheckable(False)
-        self.set_ref_button.clicked.connect(myscan.set_reference)
+        self.set_ref_button.clicked.connect(self.myscan.set_reference)
         self.set_ref_button.setStyleSheet(
                 "QPushButton:pressed { background-color: blue; }")
         self.set_ref_button.setToolTip('setea la referencia')
@@ -97,15 +93,12 @@ class setUpGUI(QtGui.QFrame):
         self.scan_change()
 
     # particulas totales
-        self.particulasLabel = QtGui.QLabel('Cantidad de puntos')
         self.particulasEdit = QtGui.QLabel('0')
         self.particulasEdit.setFixedWidth(40)
         self.particulasEdit.setToolTip('Cantidad de particulas totales a imprimir')
-        self.particulasLabel.setToolTip('Cantidad de particulas totales a imprimir')
         self.particulasEdit.setStyleSheet(
                                         " background-color: rgb(200,200,200)")
     # Indice actual
-        self.indice_impresionLabel = QtGui.QLabel('Indice de impresion')
         self.indice_impresionEdit = QtGui.QLabel('0')
         self.indice_impresionEdit.setFixedWidth(40)
         self.indice_impresionEdit.setStyleSheet(
@@ -115,23 +108,23 @@ class setUpGUI(QtGui.QFrame):
         self.grid_print = QtGui.QWidget()
         grid_print_layout = QtGui.QGridLayout()
         self.grid_print.setLayout(grid_print_layout)
-        grid_print_layout.addWidget(self.cargar_archivo_button,   0, 1, 2, 1)
-        grid_print_layout.addWidget(self.imprimir_button,         0, 2, 2, 1)
-        grid_print_layout.addWidget(self.next_button,             2, 2, 2, 1)
-        grid_print_layout.addWidget(self.go_ref_button,           2, 1)
-        grid_print_layout.addWidget(self.set_ref_button,          3, 1)
-        grid_print_layout.addWidget(grid_laser_label,             0, 3, 1, 2)
-        grid_print_layout.addWidget(self.grid_laser,              1, 3, 1, 2)
-        grid_print_layout.addWidget(self.umbralLabel,             3, 3)
-        grid_print_layout.addWidget(self.umbralEdit,              4, 3)
-        grid_print_layout.addWidget(self.tmaxLabel,               3, 4)
-        grid_print_layout.addWidget(self.tmaxEdit,                4, 4)
-        grid_print_layout.addWidget(self.scan_check,              4, 2)
-        grid_print_layout.addWidget(self.particulasLabel,         0, 5)
-        grid_print_layout.addWidget(self.particulasEdit,          1, 5)
-        grid_print_layout.addWidget(self.indice_impresionLabel,   2, 5)
-        grid_print_layout.addWidget(self.indice_impresionEdit,    3, 5)
-        grid_print_layout.addWidget(self.grid_plot_check,            4, 1)
+        grid_print_layout.addWidget(self.cargar_archivo_button,          0, 1, 2, 1)
+        grid_print_layout.addWidget(self.imprimir_button,                0, 2, 2, 1)
+        grid_print_layout.addWidget(self.next_button,                    2, 2, 2, 1)
+        grid_print_layout.addWidget(self.go_ref_button,                  2, 1)
+        grid_print_layout.addWidget(self.set_ref_button,                 3, 1)
+        grid_print_layout.addWidget(grid_laser_label,                    0, 3, 1, 2)
+        grid_print_layout.addWidget(self.grid_laser,                     1, 3, 1, 2)
+        grid_print_layout.addWidget(QtGui.QLabel('Umbral'),              3, 3)
+        grid_print_layout.addWidget(self.umbralEdit,                     4, 3)
+        grid_print_layout.addWidget(QtGui.QLabel('t max (s)'),           3, 4)
+        grid_print_layout.addWidget(self.tmaxEdit,                       4, 4)
+        grid_print_layout.addWidget(self.scan_check,                     4, 2)
+        grid_print_layout.addWidget(QtGui.QLabel('Cantidad de puntos'),  0, 5)
+        grid_print_layout.addWidget(self.particulasEdit,                 1, 5)
+        grid_print_layout.addWidget(QtGui.QLabel('Indice de impresion'), 2, 5)
+        grid_print_layout.addWidget(self.indice_impresionEdit,           3, 5)
+        grid_print_layout.addWidget(self.grid_plot_check,                4, 1)
 
     # Cosas para la parte del foco
 
@@ -144,13 +137,12 @@ class setUpGUI(QtGui.QFrame):
         self.focus_laser.activated.connect(
                                     lambda: self.color_menu(self.focus_laser))
         self.color_menu(self.focus_laser)
-        focus_laser_label = QtGui.QLabel('<strong> Focus Laser')
 
 
     # Boton para Lockear el foco
         self.focus_lock_button = QtGui.QPushButton('Lock Focus')
         self.focus_lock_button.setCheckable(False)
-        self.focus_lock_button.clicked.connect(myscan.focus_lock_focus_rampas)
+        self.focus_lock_button.clicked.connect(self.myscan.focus_lock_focus_rampas)
         self.focus_lock_button.setToolTip('guarda el patron en el z actual')
         self.focus_lock_button.setStyleSheet(
                 "QPushButton { background-color: rgb(254,100,100) ; }"
@@ -159,15 +151,15 @@ class setUpGUI(QtGui.QFrame):
     # Boton de Autocorrelacion, con el foco ya lockeado
         self.focus_autocorr_button = QtGui.QPushButton('Autocorrelacion')
         self.focus_autocorr_button.setCheckable(False)
-        self.focus_autocorr_button.clicked.connect(myscan.focus_autocorr_rampas)
+        self.focus_autocorr_button.clicked.connect(self.myscan.focus_autocorr_rampas)
         self.focus_autocorr_button.setToolTip('guarda el patron nel z actual')
 
     # Go to maximun
         self.focus_gotomax_button = QtGui.QPushButton('go to maximun')
         self.focus_gotomax_button.setCheckable(False)
-        self.focus_gotomax_button.clicked.connect(myscan.paramChangedInitialize)
+        self.focus_gotomax_button.clicked.connect(self.myscan.paramChangedInitialize)
 
-        self.focus_gotomax_button.clicked.connect(myscan.focus_go_to_maximun)
+        self.focus_gotomax_button.clicked.connect(self.myscan.focus_go_to_maximun)
         self.focus_gotomax_button.setToolTip('guarda el patron en el z actual')
 
     # En otra grid poner las cosas del foco
@@ -177,7 +169,7 @@ class setUpGUI(QtGui.QFrame):
         grid_focus_layout.addWidget(self.focus_lock_button,       1, 1, 2, 1)
         grid_focus_layout.addWidget(self.focus_autocorr_button,   2, 1, 2, 1)
         grid_focus_layout.addWidget(self.focus_gotomax_button,    3, 1, 2, 1)
-        grid_focus_layout.addWidget(focus_laser_label,            2, 2)
+        grid_focus_layout.addWidget(QtGui.QLabel('<strong> Focus Laser'), 2, 2)
         grid_focus_layout.addWidget(self.focus_laser,             3, 2)
 
     # particles to autofocus
@@ -213,19 +205,19 @@ class setUpGUI(QtGui.QFrame):
 
     # Shutters buttons
         self.shutter0button = QtGui.QCheckBox('shutter Green')
-        self.shutter0button.clicked.connect(myscan.shutter0)
+        self.shutter0button.clicked.connect(self.myscan.shutter0)
         self.shutter0button.setStyleSheet("color: green; ")
 
         self.shutter1button = QtGui.QCheckBox('shutter Red')
-        self.shutter1button.clicked.connect(myscan.shutter1)
+        self.shutter1button.clicked.connect(self.myscan.shutter1)
         self.shutter1button.setStyleSheet("color: red; ")
 
         self.shutter2button = QtGui.QCheckBox('shutter Blue')
-        self.shutter2button.clicked.connect(myscan.shutter2)
+        self.shutter2button.clicked.connect(self.myscan.shutter2)
         self.shutter2button.setStyleSheet("color: blue; ")
 
         self.shutter3button = QtGui.QCheckBox('shutter IR (808)')
-        self.shutter3button.clicked.connect(myscan.shutter3)
+        self.shutter3button.clicked.connect(self.myscan.shutter3)
         self.shutter3button.setStyleSheet("color: dark red; ")
 
 #        self.shutter3button.clicked.connect(lambda: self.openShutter(shutter[3]))
@@ -266,11 +258,9 @@ class setUpGUI(QtGui.QFrame):
         self.dimeros_next_button.setToolTip('empieza')
 
     # tiempo de espera dimeros
-        self.t_waitLabel = QtGui.QLabel('t espera (s)')
         self.t_waitEdit = QtGui.QLineEdit('60')
         self.t_waitEdit.setFixedWidth(40)
         self.t_waitEdit.setToolTip('Tiempo que mantiene el laser prendido.')
-        self.t_waitLabel.setToolTip('Tiempo que mantiene el laser prendido.')
 
     # Defino el tipo de laser que quiero para imprimir
         self.preescan_laser = QtGui.QComboBox()
@@ -279,7 +269,7 @@ class setUpGUI(QtGui.QFrame):
         self.preescan_laser.setToolTip('Elijo el shuter para Preescanear el que ya está')
         self.preescan_laser.setFixedWidth(80)
         self.preescan_laser.activated.connect(
-                                lambda: self.color_menu(myscan.preescan_laser))
+                                lambda: self.color_menu(self.myscan.preescan_laser))
         self.color_menu(self.preescan_laser)
 
     # Defino el tipo de laser que quiero para imprimir
@@ -289,27 +279,19 @@ class setUpGUI(QtGui.QFrame):
         self.dimerscan_laser.setToolTip('Elijo el shuter para escanear el dimero ')
         self.dimerscan_laser.setFixedWidth(80)
         self.dimerscan_laser.activated.connect(
-                                lambda: self.color_menu(myscan.dimerscan_laser))
+                                lambda: self.color_menu(self.myscan.dimerscan_laser))
         self.color_menu(self.dimerscan_laser)
 
-    # particulas totales
-        self.dimero_totalLabel = QtGui.QLabel('Dimeros totales')
-        self.dimero_totalEdit = QtGui.QLabel('0')
-        self.dimero_totalEdit.setFixedWidth(40)
-        self.dimero_totalEdit.setToolTip('Cantidad de particulas totales a imprimir')
     # Indice actual
-        self.indice_dimeroLabel = QtGui.QLabel('Indice dimero')
         self.indice_dimeroEdit = QtGui.QLabel('0')
         self.indice_dimeroEdit.setFixedWidth(40)
         self.indice_dimeroEdit.setStyleSheet(
                                         " background-color: rgb(200,200,200)")
 
     # Posicion a imprimir el dimero
-        self.dimero_posxLabel = QtGui.QLabel('Dx [µm]')
         self.dimero_posxEdit = QtGui.QLineEdit('10')
         self.dimero_posxEdit.setFixedWidth(40)
         self.dimero_posxEdit.setToolTip('distancia en x donde imprimir.')
-        self.dimero_posyLabel = QtGui.QLabel('Dy [µm]')
         self.dimero_posyEdit = QtGui.QLineEdit('0')
         self.dimero_posyEdit.setFixedWidth(40)
         self.dimero_posyEdit.setToolTip('distancia en y donde imprimir')
@@ -319,22 +301,22 @@ class setUpGUI(QtGui.QFrame):
 
         grid_grow = QtGui.QGridLayout()
         self.grid_grow.setLayout(grid_grow)
-        grid_grow.addWidget(self.dimeros_button,       1, 0)
-        grid_grow.addWidget(self.dimeros_next_button,  1, 1)
-        grid_grow.addWidget(self.t_waitLabel,          4, 1)
-        grid_grow.addWidget(self.t_waitEdit,           5, 1)
+        grid_grow.addWidget(self.dimeros_button,           1, 0)
+        grid_grow.addWidget(self.dimeros_next_button,      1, 1)
+        grid_grow.addWidget(QtGui.QLabel('t espera (s)'),  4, 1)
+        grid_grow.addWidget(self.t_waitEdit,               5, 1)
 
-        grid_grow.addWidget(self.dimero_posxLabel,     2, 1)
-        grid_grow.addWidget(self.dimero_posxEdit,      3, 1)
-        grid_grow.addWidget(self.dimero_posyLabel,     2, 2)
-        grid_grow.addWidget(self.dimero_posyEdit,      3, 2)
+        grid_grow.addWidget(QtGui.QLabel('Dx [µm]'),     2, 1)
+        grid_grow.addWidget(self.dimero_posxEdit,        3, 1)
+        grid_grow.addWidget(QtGui.QLabel('Dy [µm]'),     2, 2)
+        grid_grow.addWidget(self.dimero_posyEdit,        3, 2)
         
-        grid_grow.addWidget(QtGui.QLabel('Pre scan Laser'),   4, 0)
+        grid_grow.addWidget(QtGui.QLabel('Pre scan Laser'),    4, 0)
         grid_grow.addWidget(QtGui.QLabel('Dimer scan Laser'),  4, 4)
-        grid_grow.addWidget(self.preescan_laser,   5, 0)
-        grid_grow.addWidget(self.dimerscan_laser,  5, 4)
-        grid_grow.addWidget(self.indice_dimeroLabel,             1, 4)
-        grid_grow.addWidget(self.indice_dimeroEdit,              2, 4)
+        grid_grow.addWidget(self.preescan_laser,               5, 0)
+        grid_grow.addWidget(self.dimerscan_laser,              5, 4)
+        grid_grow.addWidget(QtGui.QLabel('Indice dimero'),     1, 4)
+        grid_grow.addWidget(self.indice_dimeroEdit,            2, 4)
 
         grid_grow.addWidget(QtGui.QLabel(''),          2, 0)
         grid_grow.addWidget(QtGui.QLabel(''),          6, 0)
@@ -342,7 +324,7 @@ class setUpGUI(QtGui.QFrame):
     # Read pos button.
         self.read_pos_button = QtGui.QPushButton("Read")
         self.read_pos_button.setCheckable(False)
-        self.read_pos_button.clicked.connect(myscan.read_pos)
+        self.read_pos_button.clicked.connect(self.myscan.read_pos)
         self.read_pos_button.setToolTip('Lee la posicion actual')
         self.read_pos_Label = QtGui.QLabel('Posicion medida')
 
@@ -378,7 +360,7 @@ class setUpGUI(QtGui.QFrame):
     # LiveView Button
         self.liveviewButton = QtGui.QPushButton('confocal Scan')
         self.liveviewButton.setCheckable(True)
-        self.liveviewButton.clicked.connect(myscan.liveview)
+        self.liveviewButton.clicked.connect(self.myscan.liveview)
         self.liveviewButton.setStyleSheet(
                 "QPushButton { background-color: green; }"
                 "QPushButton:pressed { background-color: blue; }")
@@ -403,21 +385,21 @@ class setUpGUI(QtGui.QFrame):
     # to Calculate the mass center
         self.CMcheck = QtGui.QCheckBox('calcula CM')
         self.CMcheck.setCheckable(False)
-        self.CMcheck.clicked.connect(myscan.CMmeasure)
+        self.CMcheck.clicked.connect(self.myscan.CMmeasure)
         self.CMcheck.setToolTip('makes a basic measurement of\
                                 the center of mass')
 
     # 2D Gaussian fit to estimate the center of a NP
         self.Gausscheck = QtGui.QCheckBox('Gauss fit')
         self.Gausscheck.setCheckable(False)
-        self.Gausscheck.clicked.connect(myscan.GaussFit)
+        self.Gausscheck.clicked.connect(self.myscan.GaussFit)
         self.Gausscheck.setToolTip('makes 2D Gaussian fit of the image,\
                                    and give the center')
 
     # save image Button
         self.saveimageButton = QtGui.QPushButton('Save Frame')
         self.saveimageButton.setCheckable(False)
-        self.saveimageButton.clicked.connect(myscan.saveFrame)
+        self.saveimageButton.clicked.connect(self.myscan.saveFrame)
         self.saveimageButton.setStyleSheet(
                 "QPushButton { background-color:  rgb(200, 200, 10); }"
                 "QPushButton:pressed { background-color: blue; }")
@@ -448,7 +430,7 @@ class setUpGUI(QtGui.QFrame):
 
     # Change between Fwd & Bwd
         self.imagecheck = QtGui.QCheckBox('Image change')
-        self.imagecheck.clicked.connect(myscan.imageplot)
+        self.imagecheck.clicked.connect(self.myscan.imageplot)
         self.imagecheck.setStyleSheet(" color: red; ")
         self.imagecheck.setToolTip('Switch between the images FWd and BWD')
 
@@ -462,7 +444,7 @@ class setUpGUI(QtGui.QFrame):
         self.CMplot = False
         self.locked_focus = False  # when the focus is locked, it get True condition
 #        self.shuttersignal = [False]*len(shutters)  # el printing esta al revez
-        self.shuttersignal = [True]*len(shutters)
+#        self.shuttersignal = [True]*len(shutters)
 
 
     # autoLevel image. Change between automatic colorScale or manual
@@ -475,7 +457,7 @@ class setUpGUI(QtGui.QFrame):
     # ploting image with matplotlib (slow). if Npix>500 is very slow
         self.plotLivebutton = QtGui.QPushButton('Plot this frame')
         self.plotLivebutton.setChecked(False)
-        self.plotLivebutton.clicked.connect(myscan.plotLive)
+        self.plotLivebutton.clicked.connect(self.myscan.plotLive)
         self.plotLivebutton.setToolTip('Plot this image with matplotlive')
 
     # Select the detector
@@ -486,7 +468,7 @@ class setUpGUI(QtGui.QFrame):
     # Point scan (TRAZA)
         self.trazaButton = QtGui.QPushButton('TRAZA')
         self.trazaButton.setCheckable(False)
-        self.trazaButton.clicked.connect(myscan.traza_start)
+        self.trazaButton.clicked.connect(self.myscan.traza_start)
         self.trazaLabel = QtGui.QLabel('<strong>0.00|0.00')
         self.trazaButton.setToolTip('continuously measures the APDs (Ctrl+T)')
 
@@ -512,9 +494,9 @@ class setUpGUI(QtGui.QFrame):
         self.pixelTimeEdit.setValidator(self.onlypos)
         self.scanRangeEdit.setValidator(self.onlypos)
 
-        self.numberofPixelsEdit.textEdited.connect(myscan.PixelSizeChange)
-        self.pixelSizeValue.textEdited.connect(myscan.NpixChange)
-        self.scanRangeEdit.textEdited.connect(myscan.PixelSizeChange)
+        self.numberofPixelsEdit.textEdited.connect(self.myscan.PixelSizeChange)
+        self.pixelSizeValue.textEdited.connect(self.myscan.NpixChange)
+        self.scanRangeEdit.textEdited.connect(self.myscan.PixelSizeChange)
 
     # Defino el tipo de laser que quiero para imprimir
         self.scan_laser = QtGui.QComboBox()
@@ -523,7 +505,7 @@ class setUpGUI(QtGui.QFrame):
         self.scan_laser.setToolTip('Elijo el shuter para scanear')
         self.scan_laser.setFixedWidth(80)
         self.scan_laser.activated.connect(
-                                    lambda: self.color_menu(myscan.scan_laser))
+                                    lambda: self.color_menu(self.myscan.scan_laser))
         self.color_menu(self.scan_laser)
         scan_laser = QtGui.QLabel('<strong> Scan Laser')
 
@@ -735,7 +717,7 @@ class setUpGUI(QtGui.QFrame):
         self.ygotoLabel = QtGui.QLineEdit("40.000")
         self.zgotoLabel = QtGui.QLineEdit("40.000")
         self.gotoButton = QtGui.QPushButton("♫ G0 To ♪")
-        self.gotoButton.pressed.connect(myscan.goto)
+        self.gotoButton.pressed.connect(self.myscan.goto)
         layout2.addWidget(self.gotoButton, 1, 5, 2, 2)
         layout2.addWidget(self.xgotoLabel, 1, 2)
         layout2.addWidget(self.ygotoLabel, 2, 2)
@@ -758,7 +740,7 @@ class setUpGUI(QtGui.QFrame):
         layout3.addWidget(self.CMyLabel, 3, 2)
         layout3.addWidget(self.CMyValue, 4, 2)
         self.goCMButton = QtGui.QPushButton("♠ Go CM ♣")
-        self.goCMButton.pressed.connect(myscan.goCM)
+        self.goCMButton.pressed.connect(self.myscan.goCM)
         layout3.addWidget(self.goCMButton, 1, 4, 1, 2)
         layout3.addWidget(self.CMcheck, 1, 1, 1, 2)
 
@@ -772,7 +754,7 @@ class setUpGUI(QtGui.QFrame):
         layout3.addWidget(self.GaussyValue, 4, 5)
 #        layout3.addWidget(QtGui.QLabel(' '), 4, 4)
         self.goCMButton = QtGui.QPushButton("♥ Go Gauss ♦")
-        self.goCMButton.pressed.connect(myscan.goGauss)
+        self.goCMButton.pressed.connect(self.myscan.goGauss)
         layout3.addWidget(self.goCMButton, 2, 4, 1, 2)
         layout3.addWidget(self.Gausscheck, 2, 1, 1, 2)
 
@@ -850,31 +832,31 @@ class setUpGUI(QtGui.QFrame):
 # %% shortcuts todos juntos
         self.liveviewAction = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('Ctrl+a'), self, myscan.liveviewKey)
+            QtGui.QKeySequence('Ctrl+a'), self, self.myscan.liveviewKey)
 
         self.grid_start_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('F5'), self, myscan.grid_start)
+            QtGui.QKeySequence('F5'), self, self.myscan.grid_start)
 
         self.focus_maximun_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('F8'), self, myscan.focus_go_to_maximun)
+            QtGui.QKeySequence('F8'), self, self.myscan.focus_go_to_maximun)
 
         self.grid_read_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('F1'), self, myscan.grid_read)
+            QtGui.QKeySequence('F1'), self, self.myscan.grid_read)
 
         self.grid_autocorr_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('F9'), self, myscan.focus_autocorr_rampas)
+            QtGui.QKeySequence('F9'), self, self.myscan.focus_autocorr_rampas)
 
         self.lock_focus_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('ctrl+f'), self, myscan.focus_lock_focus_rampas)
+            QtGui.QKeySequence('ctrl+f'), self, self.myscan.focus_lock_focus_rampas)
 
         self.lock_focus_action = QtGui.QAction(self)
         QtGui.QShortcut(
-            QtGui.QKeySequence('ctrl+t'), self, myscan.traza_start)
+            QtGui.QKeySequence('ctrl+t'), self, self.myscan.traza_start)
 #TODO: agregar mas Shortcuts copados (o copiar los de labview)
 
     def power_change(self):

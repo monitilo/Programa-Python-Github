@@ -5,18 +5,43 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.ptime as ptime
 import numpy as np
 from Placa import *
-#from setUpGUI import *
+
+from setUpGUI import setUpGUI
+
+
 class scannerWidget(QtGui.QFrame):
 
-    def __init__(self, main, device=device, *args, **kwargs):  # agregue device
+    def __init__(self, main, buttons, device=device):  # agregue device
 
         print('SCANNER INSTANCIADO')
-        super().__init__(*args, **kwargs)
+        super().__init__()
 
         self.main = main
         self.nidaq = device
+        self.setUpGUI = buttons
     #  algunas cosas que ejecutan una vez antes de empezar
         self.shuttersChannelsNidaq()  # open a digital channel and let it open
+
+        self.numberofPixelsEdit = self.setUpGUI.numberofPixelsEdit
+        self.scanRangeEdit = self.setUpGUI.scanRangeEdit
+        self.pixelTimeEdit = self.setUpGUI.pixelTimeEdit
+        self.xLabel = self.setUpGUI.xLabel
+        self.yLabel = self.setUpGUI.zLabel
+        self.yLabel = self.setUpGUI.zLabel
+        self.scanMode = self.setUpGUI.scanMode
+        self.pixelSizeValue = self.setUpGUI.pixelSizeValue
+        self.xStepEdit = self.setUpGUI.xStepEdit
+        self.yStepEdit = self.setUpGUI.yStepEdit
+        self.zStepEdit = self.setUpGUI.zStepEdit
+        self.CMxValue = self.setUpGUI.CMxValue
+        self.CMyValue = self.setUpGUI.CMyValue
+        self.zgotoLabel = self.setUpGUI.zgotoLabel
+        self.GaussxValue = self.setUpGUI.GaussxValue
+        self.GaussyValue = self.setUpGUI.GaussyValue
+
+        self.shuttersignal = [True]*len(shutters)
+
+        
 
         self.read_pos()  # read where it is and write in the x/y/zLabel texts
 
@@ -51,12 +76,12 @@ class scannerWidget(QtGui.QFrame):
 
 # %% Un monton de pequeñas cosas funciones que agregé
     def imageplot(self):
-        if self.imagecheck.isChecked():
+        if self.setUpGUI.imagecheck.isChecked():
             self.img.setImage(self.image2, autoLevels=self.autoLevels)
-            self.imagecheck.setStyleSheet(" color: green; ")
+            self.setUpGUI.imagecheck.setStyleSheet(" color: green; ")
         else:
             self.img.setImage(self.image, autoLevels=self.autoLevels)
-            self.imagecheck.setStyleSheet(" color: red; ")
+            self.setUpGUI.imagecheck.setStyleSheet(" color: red; ")
 
     def liveviewKey(self):
         '''Triggered by the liveview shortcut.'''
@@ -267,7 +292,7 @@ class scannerWidget(QtGui.QFrame):
         imgvuelta = self.PD[PD_channels[self.color_scan]][int(Nmedio+self.Nspeed):-int(self.Nspeed)]
         self.image2[:, -1-self.dy] = imgvuelta
 
-        if self.imagecheck.isChecked():
+        if self.setUpGUI.imagecheck.isChecked():
             self.img.setImage(self.image2, autoLevels=self.autoLevels)
         else:
             self.img.setImage(self.image, autoLevels=self.autoLevels)
@@ -510,7 +535,7 @@ class scannerWidget(QtGui.QFrame):
     # TODO: quizas promediar
 
     def zMoveUp(self, algo=1):
-        self.move('z', algo*float(getattr(self, 'z' + "StepEdit").text()))
+        self.move('z', algo*float(self.zStepEdit.text()))
         self.zDownButton.setEnabled(True)
         self.zDownButton.setStyleSheet(
             "QPushButton { background-color: }")
@@ -518,12 +543,12 @@ class scannerWidget(QtGui.QFrame):
 
     def zMoveDown(self, algo=1):
         PosZ = self.initialPosition[2]
-        if PosZ < algo*float(getattr(self, 'z' + "StepEdit").text()):
+        if PosZ < algo*float(self.zStepEdit.text()):
             print("OJO!, te vas a Z's negativos")
             self.zStepEdit.setStyleSheet(" background-color: red; ")
 #            setStyleSheet("color: rgb(255, 0, 255);")
         else:
-            self.move('z', -algo*float(getattr(self, 'z' + "StepEdit").text()))
+            self.move('z', -algo*float(self.zStepEdit.text()))
             self.zStepEdit.setStyleSheet(" background-color: ")
             if self.initialPosition[2] == 0:  # para no ir a z negativo
                 self.zDownButton.setStyleSheet(
@@ -617,27 +642,27 @@ class scannerWidget(QtGui.QFrame):
 
 # %% ---  Shutters zone ---------------------------------
     """esto seguro se puede hacer mejor. No tiene sentido tener 4 cosas copiadas
-    Con algo tipo self.shutter3button.clicked.connect(lambda: self.openShutter(shutter[3]))"""
+    Con algo tipo self.setUpGUI.shutter3button.clicked.connect(lambda: self.openShutter(shutter[3]))"""
     def shutter0(self):  # 532
-        if self.shutter0button.isChecked():
+        if self.setUpGUI.shutter0button.isChecked():
             self.openShutter(shutters[0])
         else:
             self.closeShutter(shutters[0])
 
     def shutter1(self):  # 640
-        if self.shutter1button.isChecked():
+        if self.setUpGUI.shutter1button.isChecked():
             self.openShutter(shutters[1])
         else:
             self.closeShutter(shutters[1])
 
     def shutter2(self):  # 405
-        if self.shutter2button.isChecked():
+        if self.setUpGUI.shutter2button.isChecked():
             self.openShutter(shutters[2])
         else:
             self.closeShutter(shutters[2])
 
     def shutter3(self):
-        if self.shutter3button.isChecked():
+        if self.setUpGUI.shutter3button.isChecked():
             self.openShutter(shutters[3])
         else:
             self.closeShutter(shutters[3])
@@ -662,21 +687,21 @@ class scannerWidget(QtGui.QFrame):
 
     def checkShutters(self):
         if not self.shuttersignal[0]:
-            self.shutter0button.setChecked(True)
+            self.setUpGUI.shutter0button.setChecked(True)
         else:
-            self.shutter0button.setChecked(False)
+            self.setUpGUI.shutter0button.setChecked(False)
         if not self.shuttersignal[1]:
-            self.shutter1button.setChecked(True)
+            self.setUpGUI.shutter1button.setChecked(True)
         else:
-            self.shutter1button.setChecked(False)
+            self.setUpGUI.shutter1button.setChecked(False)
         if not  self.shuttersignal[2]:
-            self.shutter2button.setChecked(True)
+            self.setUpGUI.shutter2button.setChecked(True)
         else:
-            self.shutter2button.setChecked(False)
+            self.setUpGUI.shutter2button.setChecked(False)
         if not  self.shuttersignal[3]:
-            self.shutter3button.setChecked(True)
+            self.setUpGUI.shutter3button.setChecked(True)
         else:
-            self.shutter3button.setChecked(False)
+            self.setUpGUI.shutter3button.setChecked(False)
 
     def shuttersChannelsNidaq(self):
         try:
@@ -685,7 +710,7 @@ class scannerWidget(QtGui.QFrame):
                 self.shuttertask.do_channels.add_do_chan(
                     lines="Dev1/port0/line{}".format(shutterschan[n]),
                     line_grouping=nidaqmx.constants.LineGrouping.CHAN_PER_LINE)
-            self.shuttering = True
+#            self.shuttering = True
         except IOError as e:
             print("I/O error({0}): {1}".format(e.errno, e.strerror))
 
@@ -770,8 +795,8 @@ class scannerWidget(QtGui.QFrame):
         try:
             filepath = self.main.file_path
             # nombre con la fecha -hora
-            name = str(filepath + "/" + str(self.edit_save.text()) + ".tiff")
-            if self.imagecheck.isChecked():
+            name = str(filepath + "/" + str(self.setUpGUI.edit_save.text()) + ".tiff")
+            if self.setUpGUI.imagecheck.isChecked():
                 guardado = Image.fromarray(
                                          np.transpose(np.flip(self.image2, 1)))
             else:
@@ -780,7 +805,7 @@ class scannerWidget(QtGui.QFrame):
 
             guardado.save(name)
             self.NameNumber = self.NameNumber + 1
-            self.edit_save.setText(self.edit_Name + str(self.NameNumber))
+            self.setUpGUI.edit_save.setText(self.setUpGUI.edit_Name + str(self.NameNumber))
             print("\n Image saved\n")
         except IOError as e:
             print("I/O error({0}): {1}".format(e.errno, e.strerror))
@@ -1226,7 +1251,7 @@ class scannerWidget(QtGui.QFrame):
         self.yrefLabel.setText(str(self.yLabel.text()))
         self.zrefLabel.setText(str(self.zLabel.text()))
             
-# %% Point scan , que ahora es traza
+# %% Llama  a la Traza
 
     def traza_start(self):
         self.done()
@@ -1239,6 +1264,6 @@ class scannerWidget(QtGui.QFrame):
 
     def doit(self):
         print("Opening a new popup window...")
-        self.w = MyPopup_traza(self.main, self)
+        self.w = MyPopup_traza(self.main, self.setUpGUI, self)
         self.w.setGeometry(QtCore.QRect(750, 50, 450, 600))
         self.w.show()

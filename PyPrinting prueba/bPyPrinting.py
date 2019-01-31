@@ -28,6 +28,8 @@ from pipython import GCSDevice
 
 #import Placa
 from Placa import *
+
+
 print(device)
 
 # %% Main Interface

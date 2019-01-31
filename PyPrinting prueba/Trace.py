@@ -9,6 +9,8 @@ from Placa import *
 #shutters = Placa.shutters
 from setUpGUI import setUpGUI
 
+from scanner import scannerWidget
+
 class MyPopup_traza(QtGui.QWidget):
     """ new class to create a new window for the trace menu"""
 
@@ -16,11 +18,12 @@ class MyPopup_traza(QtGui.QWidget):
         self.stop()
         print("Paró y cerró la traza")
 
-    def __init__(self, main, setUpGUI, *args, **kwargs):
+    def __init__(self, main, buttons, scanbuttons):
         QtGui.QWidget.__init__(self)
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.main = main
-        self.setUpGUI = setUpGUI  # call setUpGUI
+        self.setUpGUI = buttons  # call setUpGUI
+        self.scannerWidget = scanbuttons
         self.traza_Widget2 = pg.GraphicsLayoutWidget()
         self.running = False
         grid = QtGui.QGridLayout()
@@ -104,12 +107,12 @@ class MyPopup_traza(QtGui.QWidget):
                 self.PointScan()
         else:
             print("pause")
-            self.scanner.closeShutter(self.traza_shutterabierto)
+            self.scannerWidget.closeShutter(self.traza_shutterabierto)
             self.pointtimer.stop()
 
     def stop(self):
         print("stop")
-        self.scanner.closeShutter(self.traza_shutterabierto)
+        self.scannerWidget.closeShutter(self.traza_shutterabierto)
         try:
             self.pointtimer.stop()
         except IOError as e:
@@ -125,8 +128,8 @@ class MyPopup_traza(QtGui.QWidget):
     def traza_openshutter(self):
         """ abre el shutter que se va a utilizar para imprimir"""
         for i in range(len(shutters)):
-            if self.scanner.traza_laser.currentText() == shutters[i]:
-                self.scanner.openShutter(shutters[i])
+            if self.scannerWidget.traza_laser.currentText() == shutters[i]:
+                self.scannerWidget.openShutter(shutters[i])
                 self.traza_shutterabierto = shutters[i]
 
     def save_traza(self, imprimiendo=False):
@@ -136,7 +139,7 @@ class MyPopup_traza(QtGui.QWidget):
             filepath = self.main.file_path
             timestr = time.strftime("%d%m%Y-%H%M%S")
             if imprimiendo:  # si viene de la rutina, guarda automatico con el numero de particula
-                timestr = str("Particula-") + str(self.scanner.i_global)
+                timestr = str("Particula-") + str(self.scannerWidget.i_global)
                 self.setUpGUI.edit_save.setText(str(timestr))
             name = str(filepath + "/" + timestr + "-Traza" + ".txt")
             print("va a abrir el name")
