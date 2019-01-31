@@ -3,6 +3,7 @@
 import nidaqmx
 from pipython import GCSDevice
 
+
 device = nidaqmx.system.System.local().devices['Dev1']
 
 AOchans = [0, 1]  # TODO: flipper 0 y 1. No estan configurados
