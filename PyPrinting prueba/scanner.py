@@ -5,29 +5,31 @@ from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.ptime as ptime
 import numpy as np
 from Placa import *
-
-from setUpGUI import setUpGUI
+print("se viene el error")
+from setUpGUIarchivo import setUpGUI
+print("safamos")
 
 
 class scannerWidget(QtGui.QFrame):
 
-    def __init__(self, main, buttons, device=device):  # agregue device
+    def __init__(self, main, device=device):  # agregue device
 
         print('SCANNER INSTANCIADO')
         super().__init__()
 
         self.main = main
         self.nidaq = device
-        self.setUpGUI = buttons
+        self.setUpGUI = setUpGUI
+        print(self.setUpGUI)
     #  algunas cosas que ejecutan una vez antes de empezar
         self.shuttersChannelsNidaq()  # open a digital channel and let it open
 
         self.numberofPixelsEdit = self.setUpGUI.numberofPixelsEdit
         self.scanRangeEdit = self.setUpGUI.scanRangeEdit
         self.pixelTimeEdit = self.setUpGUI.pixelTimeEdit
-        self.xLabel = self.setUpGUI.xLabel
-        self.yLabel = self.setUpGUI.zLabel
-        self.yLabel = self.setUpGUI.zLabel
+#        self.xLabel = self.setUpGUI.xLabel
+#        self.yLabel = self.setUpGUI.zLabel
+#        self.yLabel = self.setUpGUI.zLabel
         self.scanMode = self.setUpGUI.scanMode
         self.pixelSizeValue = self.setUpGUI.pixelSizeValue
         self.xStepEdit = self.setUpGUI.xStepEdit
@@ -989,7 +991,7 @@ class scannerWidget(QtGui.QFrame):
     def grid_openshutter(self):
         """ abre el shutter que se va a utilizar para imprimir"""
         for i in range(len(shutters)):
-            if self.grid_laser.currentText() == shutters[i]:
+            if self.setUpGUI.grid_laser.currentText() == shutters[i]:
                 self.openShutter(shutters[i])
                 self.grid_shutterabierto = shutters[i]
 
@@ -1225,12 +1227,12 @@ class scannerWidget(QtGui.QFrame):
 
     def read_pos(self):
         """lee las entradas analogicas que manda la platina y se donde estoy"""
-        print("read pos")
+        print("read pos",self.setUpGUI.xLabel)
 
         pos = pi_device.qPOS()
-        self.xLabel.setText(str(pos['A']))
-        self.yLabel.setText(str(pos['B']))
-        self.zLabel.setText(str(pos['C']))
+        self.setUpGUI.xLabel.setText(str(pos['A']))
+        self.setUpGUI.yLabel.setText(str(pos['B']))
+        self.setUpGUI.zLabel.setText(str(pos['C']))
     # TODO: quizas sea util promediar en muchas medidas
 
     def go_reference(self):

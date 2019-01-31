@@ -643,6 +643,7 @@ class ScanWidget(QtGui.QFrame):
     # Select the wanted scan mode
         self.scanMode = QtGui.QComboBox()
         self.scanMode.addItems(scanModes)  # step or ramp
+        self.scanMode.setCurrentIndex(1)
         self.scanMode.setToolTip('Selec the scan type.\
         With a voltage ramps or step by step')
 

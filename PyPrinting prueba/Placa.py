@@ -16,6 +16,7 @@ shutterschan = [9, 10, 11, 12]  # las salidas digitales de cada shutter
 
 apdrate = 10**5  # TODO: ver velocidad del PD... 5kH dicen
 
+shutters_channels = {shutters[0]: 9, shutters[1]: 10, shutters[2]: 11, shutters[3]: 12}
 PD_channels = {shutters[0]: 0, shutters[1]: 1, shutters[2]: 2, shutters[3]: 1}
 
 servo_time = 0.000040  # seconds  # tiempo del servo: 40­µs. lo dice qGWD()
@@ -39,3 +40,15 @@ except IOError as e:
     print("I/O error({0}): {1}".format(e.errno, e.strerror))
     print("No conecta con la platina!!!")
 
+def OpenShutter(shutterbuttonstate, color = shutters[0]):
+    with nidaqmx.Task("shutter") as shuttertask:
+        shuttertask.do_channels.add_do_chan(
+            lines="Dev1/port0/line{}".format(shutters_channels[color]),
+            line_grouping=nidaqmx.constants.LineGrouping.CHAN_PER_LINE)
+
+        if shutterbuttonstate:
+            shuttertask.write(True, auto_start=True)
+            print("abre")
+        else:
+            shuttertask.write(False, auto_start=True)
+            print("cierra")

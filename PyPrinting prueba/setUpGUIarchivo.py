@@ -15,6 +15,7 @@ class setUpGUI(QtGui.QFrame):
         self.nidaq = device
         
         self.myscan = scannerWidget
+        print("me perdi")
 # ---  COSAS DE PRINTIG!
 
     # Cosas para la rutina de imprimir. Grid
@@ -36,8 +37,8 @@ class setUpGUI(QtGui.QFrame):
         self.grid_laser.setToolTip('Elijo el shuter para IMPRIMIR la grilla')
         self.grid_laser.setFixedWidth(80)
         self.grid_laser.activated.connect(
-                                    lambda: self.color_menu(self.myscan.grid_laser))
-        self.color_menu(self.myscan.grid_laser)
+                                    lambda: self.color_menu(self.grid_laser))
+        self.color_menu(self.grid_laser)
         grid_laser_label = QtGui.QLabel('<strong> Print Laser')
 
     # Buttons

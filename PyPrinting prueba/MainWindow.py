@@ -7,7 +7,9 @@ from pyqtgraph.Qt import QtGui
 import time
 #import Placa
 from Placa import *
-from setUpGUI import setUpGUI
+print("aa")
+from setUpGUIarchivo import setUpGUI
+
 import scanner
 
 class MainWindow(QtGui.QMainWindow):

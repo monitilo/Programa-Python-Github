@@ -7,7 +7,7 @@ import numpy as np
 
 from Placa import *
 #shutters = Placa.shutters
-from setUpGUI import setUpGUI
+from setUpGUIarchivo import setUpGUI
 
 from scanner import scannerWidget
 
