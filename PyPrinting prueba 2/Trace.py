@@ -4,7 +4,7 @@ import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 import time
 import numpy as np
-
+from HelpMeJesus import aPythonDeveloper
 from Placa import *
 #shutters = Placa.shutters
 from ScanWidgetjunto import ScanWidget
