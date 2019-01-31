@@ -1,7 +1,7 @@
-# %%
 """ Placa"""
 
-# %%
+import nidaqmx
+from pipython import GCSDevice
 
 device = nidaqmx.system.System.local().devices['Dev1']
 
@@ -17,6 +17,9 @@ shutterschan = [9, 10, 11, 12]  # las salidas digitales de cada shutter
 apdrate = 10**5  # TODO: ver velocidad del PD... 5kH dicen
 
 PD_channels = {shutters[0]: 0, shutters[1]: 1, shutters[2]: 2, shutters[3]: 1}
+
+servo_time = 0.000040  # seconds  # tiempo del servo: 40­µs. lo dice qGWD()
+
 
 pi_device = GCSDevice ()  # Load PI Python Libraries  (thanks Physik Instrumente)
 #pi_device.EnumerateUSB()
@@ -36,4 +39,3 @@ except IOError as e:
     print("I/O error({0}): {1}".format(e.errno, e.strerror))
     print("No conecta con la platina!!!")
 
-servo_time = 0.000040  # seconds  # tiempo del servo: 40­µs. lo dice qGWD()

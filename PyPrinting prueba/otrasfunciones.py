@@ -1,4 +1,6 @@
 # %% Otras Funciones
+import numpy as np
+from scipy import optimize
 
 def gaussian(height, center_x, center_y, width_x, width_y):
     """Returns a gaussian function with the given parameters"""

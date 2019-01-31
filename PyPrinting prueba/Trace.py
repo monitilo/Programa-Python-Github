@@ -1,4 +1,13 @@
 # %% Trace
+from pyqtgraph.Qt import QtCore, QtGui
+import pyqtgraph as pg
+import pyqtgraph.ptime as ptime
+import time
+import numpy as np
+
+from Placa import *
+#shutters = Placa.shutters
+from setUpGUI import setUpGUI
 
 class MyPopup_traza(QtGui.QWidget):
     """ new class to create a new window for the trace menu"""
@@ -7,11 +16,11 @@ class MyPopup_traza(QtGui.QWidget):
         self.stop()
         print("Paró y cerró la traza")
 
-    def __init__(self, main, ScanWidget, *args, **kwargs):
+    def __init__(self, main, setUpGUI, *args, **kwargs):
         QtGui.QWidget.__init__(self)
         super().__init__(*args, **kwargs)
         self.main = main
-        self.ScanWidget = ScanWidget  # call ScanWidget
+        self.setUpGUI = setUpGUI  # call setUpGUI
         self.traza_Widget2 = pg.GraphicsLayoutWidget()
         self.running = False
         grid = QtGui.QGridLayout()
@@ -47,7 +56,7 @@ class MyPopup_traza(QtGui.QWidget):
 
     # umbral
 
-        umbralEdit = self.ScanWidget.umbralEdit
+        umbralEdit = self.setUpGUI.umbralEdit
         self.umbral = float(umbralEdit.text())
 
         self.PointLabel = QtGui.QLabel('<strong>0.00|0.00')
@@ -95,12 +104,12 @@ class MyPopup_traza(QtGui.QWidget):
                 self.PointScan()
         else:
             print("pause")
-            self.ScanWidget.closeShutter(self.traza_shutterabierto)
+            self.scanner.closeShutter(self.traza_shutterabierto)
             self.pointtimer.stop()
 
     def stop(self):
         print("stop")
-        self.ScanWidget.closeShutter(self.traza_shutterabierto)
+        self.scanner.closeShutter(self.traza_shutterabierto)
         try:
             self.pointtimer.stop()
         except IOError as e:
@@ -116,8 +125,8 @@ class MyPopup_traza(QtGui.QWidget):
     def traza_openshutter(self):
         """ abre el shutter que se va a utilizar para imprimir"""
         for i in range(len(shutters)):
-            if self.ScanWidget.traza_laser.currentText() == shutters[i]:
-                self.ScanWidget.openShutter(shutters[i])
+            if self.scanner.traza_laser.currentText() == shutters[i]:
+                self.scanner.openShutter(shutters[i])
                 self.traza_shutterabierto = shutters[i]
 
     def save_traza(self, imprimiendo=False):
@@ -127,8 +136,8 @@ class MyPopup_traza(QtGui.QWidget):
             filepath = self.main.file_path
             timestr = time.strftime("%d%m%Y-%H%M%S")
             if imprimiendo:  # si viene de la rutina, guarda automatico con el numero de particula
-                timestr = str("Particula-") + str(self.ScanWidget.i_global)
-                self.ScanWidget.edit_save.setText(str(timestr))
+                timestr = str("Particula-") + str(self.scanner.i_global)
+                self.setUpGUI.edit_save.setText(str(timestr))
             name = str(filepath + "/" + timestr + "-Traza" + ".txt")
             print("va a abrir el name")
             f = open(name, "w")
@@ -174,7 +183,7 @@ class MyPopup_traza(QtGui.QWidget):
               source=r'100kHzTimebase',  # 1000k
               samps_per_chan=len(self.points))
 
-        self.color_traza = self.ScanWidget.traza_laser.currentText()
+        self.color_traza = self.setUpGUI.traza_laser.currentText()
 
         self.ptr1 = 0
         self.timeaxis = np.empty(100)
@@ -253,7 +262,7 @@ class MyPopup_traza(QtGui.QWidget):
 
     # Este if not es el que define si se esta corriendo una grilla
         if not self.main.grid_traza_control:
-            if abs(mediochico) > abs(mediochico2)*float(self.umbral) or (ptime.time() - self.timer_inicio) > float(self.ScanWidget.tmaxEdit.text()):
+            if abs(mediochico) > abs(mediochico2)*float(self.umbral) or (ptime.time() - self.timer_inicio) > float(self.setUpGUI.tmaxEdit.text()):
                 print("medio=", np.round(mediochico), np.round(mediochico2))
                 self.save_traza(True)
                 self.closeShutter(self.color_traza)

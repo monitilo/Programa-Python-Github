@@ -26,15 +26,17 @@ from pipython import GCSDevice
 
 # %% Connection
 
-import Placa
+#import Placa
+from Placa import *
+print(device)
 
 # %% Main Interface
 
 import MainWindow
 
 # %% Interface Buttons
-
-import ScanWidgetjunto
+import setUpGUI
+import scanner
 
 #problema: como separar la clase ScanWidget
 
@@ -46,7 +48,7 @@ import otrasfunciones
 # %% End
 app = QtGui.QApplication([])
 #win = ScanWidget(device)
-win = MainWindow()
+win = MainWindow.MainWindow()
 win.show()
 
 app.exec_()

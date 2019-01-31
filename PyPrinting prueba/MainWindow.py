@@ -1,11 +1,19 @@
 # %% Main Window
 
-# %%
+import os
+import tkinter as tk
+from tkinter import filedialog
+from pyqtgraph.Qt import QtGui
+import time
+#import Placa
+from Placa import *
+from setUpGUI import setUpGUI
+import scanner
 
 class MainWindow(QtGui.QMainWindow):
 #TOsDO: Cartel para preguntar si estas seguro que queres salir
     def closeEvent(self, event):
-        reply = QtGui.QMessageBox.question(self, 'Quit', 'Are u Sure to Quit?',
+        reply = QtGui.QMessageBox.question(self, 'Quit', 'Are you sure you want to quit?',
                                            QtGui.QMessageBox.No |
                                            QtGui.QMessageBox.Yes)
         if reply == QtGui.QMessageBox.Yes:
@@ -17,7 +25,7 @@ class MainWindow(QtGui.QMainWindow):
 
         else:
             event.ignore()
-            print("NOOOO")
+            print("NO")
 
     def newCall(self):
         print('New')
@@ -134,7 +142,7 @@ class MainWindow(QtGui.QMainWindow):
         fileMenu4 = menuBar.addMenu('&<--Selecciono la carpeta desde aca!')
         fileMenu4.addAction(openAction)
 
-        self.form_widget = ScanWidget(self, device)
+        self.form_widget = setUpGUI(self, device)
         self.setCentralWidget(self.form_widget)
         self.setGeometry(10, 40, 600, 550)  # (PosX, PosY, SizeX, SizeY)
         self.save_docks()
