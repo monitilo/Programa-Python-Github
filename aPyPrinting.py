@@ -2297,7 +2297,7 @@ class ScanWidget(QtGui.QFrame):
 
     def scan_change(self):
         if self.scan_check.isChecked():
-            self.scan_check.setText('scan? = SI')
+            self.scan_check.setText('scan? = YES')
             self.scan_check.setStyleSheet("color: orange; ")
         else:
             self.scan_check.setText('scan? = NO')

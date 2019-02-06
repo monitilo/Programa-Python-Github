@@ -5,7 +5,7 @@ import tkinter as tk
 from tkinter import filedialog
 from pyqtgraph.Qt import QtGui
 import time
-#import Placa
+
 from Placa import *
 from ScanWidgetjunto import ScanWidget
 

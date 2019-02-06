@@ -13,7 +13,7 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from scipy import stats
+#from scipy import stats
 
 from Placa import *
 import Trace
@@ -24,7 +24,7 @@ class ScanWidget(QtGui.QFrame):
 
     def __init__(self, main, device, *args, **kwargs):  # agregue device
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)  #se usa??? LPM
 
         self.main = main
         self.nidaq = device
@@ -1805,6 +1805,9 @@ class ScanWidget(QtGui.QFrame):
         self.main.file_path = new_folder
         self.i_global = 1
         self.indice_impresionEdit.setText(str(self.i_global))
+
+
+#SECUENCIA DE IMPRIMIR (LPM)
 
     def grid_start(self):
         """funcion que empieza el programa de imprimir una grilla"""
