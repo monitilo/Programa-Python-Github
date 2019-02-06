@@ -1,10 +1,24 @@
 ﻿# %% ScanWidget
 from pyqtgraph.Qt import QtCore, QtGui
+
+import tkinter as tk
+from tkinter import filedialog
+import os
+
 import pyqtgraph as pg
 from pyqtgraph.dockarea import Dock, DockArea
 import pyqtgraph.ptime as ptime
+
 import numpy as np
+import time
+import matplotlib.pyplot as plt
+from scipy import ndimage
+from scipy import stats
+
 from Placa import *
+import Trace
+from otrasfunciones import *
+
 
 class ScanWidget(QtGui.QFrame):
 
@@ -122,7 +136,7 @@ class ScanWidget(QtGui.QFrame):
         grid_print_layout.addWidget(self.set_ref_button,          3, 1)
         grid_print_layout.addWidget(grid_laser_label,             0, 3, 1, 2)
         grid_print_layout.addWidget(self.grid_laser,              1, 3, 1, 2)
-        grid_print_layout.addWidget(self.umbralLabel,             3, 3)
+        grid_print_layout.addWidget(QtGui.QLabel('Umbral'),             3, 3)
         grid_print_layout.addWidget(self.umbralEdit,              4, 3)
         grid_print_layout.addWidget(self.tmaxLabel,               3, 4)
         grid_print_layout.addWidget(self.tmaxEdit,                4, 4)
@@ -492,15 +506,10 @@ class ScanWidget(QtGui.QFrame):
 
     # Scanning parameters
 
-        self.scanRangeLabel = QtGui.QLabel('Scan range (µm)')
         self.scanRangeEdit = QtGui.QLineEdit('2')
-        self.pixelTimeLabel = QtGui.QLabel('Pixel time (ms)')
         self.pixelTimeEdit = QtGui.QLineEdit('1')
         self.pixelTimeEdit.setToolTip('0.01 ms = 10 µs  :)')
-
-        self.numberofPixelsLabel = QtGui.QLabel('Number of pixels')
         self.numberofPixelsEdit = QtGui.QLineEdit('32')
-        self.pixelSizeLabel = QtGui.QLabel('Pixel size (nm)')
         self.pixelSizeValue = QtGui.QLineEdit('20')
 
         self.timeTotalLabel = QtGui.QLabel('total scan time (s)')
@@ -555,13 +564,13 @@ class ScanWidget(QtGui.QFrame):
         subgrid.addWidget(scan_laser,               0, 1)
         subgrid.addWidget(self.scan_laser,          1, 1)
         subgrid.addWidget(QtGui.QLabel('      '),   2, 1)
-        subgrid.addWidget(self.scanRangeLabel,      3, 1)
+        subgrid.addWidget(QtGui.QLabel('Scan range (µm)'),      3, 1)
         subgrid.addWidget(self.scanRangeEdit,       4, 1)
-        subgrid.addWidget(self.pixelTimeLabel,      5, 1)
+        subgrid.addWidget(QtGui.QLabel('Pixel time (ms)'),      5, 1)
         subgrid.addWidget(self.pixelTimeEdit,       6, 1)
-        subgrid.addWidget(self.numberofPixelsLabel, 7, 1)
+        subgrid.addWidget(QtGui.QLabel('Number of pixels') ,    7, 1)
         subgrid.addWidget(self.numberofPixelsEdit,  8, 1)
-        subgrid.addWidget(self.pixelSizeLabel,      9, 1)
+        subgrid.addWidget(QtGui.QLabel('Pixel size (nm)'),      9, 1)
         subgrid.addWidget(self.pixelSizeValue,     10, 1)
         subgrid.addWidget(self.liveviewButton,     11, 1)
         subgrid.addWidget(self.Continouscheck,     12, 1)
@@ -749,26 +758,22 @@ class ScanWidget(QtGui.QFrame):
         layout3 = QtGui.QGridLayout()
         self.goCMWidget = QtGui.QWidget()
         self.goCMWidget.setLayout(layout3)
-        self.CMxLabel = QtGui.QLabel('CM X')
         self.CMxValue = QtGui.QLabel('NaN')
-        self.CMyLabel = QtGui.QLabel('CM Y')
         self.CMyValue = QtGui.QLabel('NaN')
-        layout3.addWidget(self.CMxLabel, 3, 1)
+        layout3.addWidget(QtGui.QLabel('CM X'), 3, 1)
         layout3.addWidget(self.CMxValue, 4, 1)
-        layout3.addWidget(self.CMyLabel, 3, 2)
+        layout3.addWidget(QtGui.QLabel('CM Y'), 3, 2)
         layout3.addWidget(self.CMyValue, 4, 2)
         self.goCMButton = QtGui.QPushButton("♠ Go CM ♣")
         self.goCMButton.pressed.connect(self.goCM)
         layout3.addWidget(self.goCMButton, 1, 4, 1, 2)
         layout3.addWidget(self.CMcheck, 1, 1, 1, 2)
-
-        self.GaussxLabel = QtGui.QLabel('Gauss X')
+        
         self.GaussxValue = QtGui.QLabel('NaN')
-        self.GaussyLabel = QtGui.QLabel('Gauss Y')
         self.GaussyValue = QtGui.QLabel('NaN')
-        layout3.addWidget(self.GaussxLabel, 3, 4)
+        layout3.addWidget(QtGui.QLabel('Gauss X'), 3, 4)
         layout3.addWidget(self.GaussxValue, 4, 4)
-        layout3.addWidget(self.GaussyLabel, 3, 5)
+        layout3.addWidget(QtGui.QLabel('Gauss Y'), 3, 5)
         layout3.addWidget(self.GaussyValue, 4, 5)
 #        layout3.addWidget(QtGui.QLabel(' '), 4, 4)
         self.goCMButton = QtGui.QPushButton("♥ Go Gauss ♦")
@@ -1699,7 +1704,15 @@ class ScanWidget(QtGui.QFrame):
 
         tic = ptime.time()
         Z = self.image
+        
+        #Zn = stats.norm.pdf(Z)
+        #hist, bins = np.histogram(Zn.ravel(), normed=True, bins=100)
+        #threshold = bins[np.cumsum(hist)*(bins[1] - bins[0]) > 0.7][0]
+        #Zmask = np.ma.masked_less(Zn,threshold)
+        #xcm, ycm = ndimage.measurements.center_of_mass(Zmask)
+
         xcm, ycm = ndimage.measurements.center_of_mass(Z)
+        
         self.xcm = xcm
         self.ycm = ycm
         Normal = self.scanRange / self.numberofPixels
@@ -1926,9 +1939,14 @@ class ScanWidget(QtGui.QFrame):
 
         print("paso go to maximun")
         self.move_z(z_vector[np.where(z_profile_vuelta == z_max)[0][0]])
-        plt.plot(z_vector, z_profile_ida)
-        plt.plot(z_vector, z_profile_vuelta, 'r')
+        plt.plot(z_vector, z_profile_ida, label = "ida")
+        plt.plot(z_vector, z_profile_vuelta, 'r', label= "vuelta")
         plt.plot(z_vector, algomax, '.m')
+ 
+        plt.xlabel('z position [µm]')
+        plt.ylabel(' PD [V]')
+        plt.title("go to maximun")
+        plt.legend()
         plt.show()
 
     def focus_openshutter(self):
@@ -1939,9 +1957,9 @@ class ScanWidget(QtGui.QFrame):
                 self.focus_shutterabierto = shutters[i]
 
     def z_vector_create(self):
-        Npasos = self.numberofPixels  # El mismo Npasos de gotomax # TODO: algun numero de pasos a definir (50 dice en algun lado)
-        z_start = float(self.zLabel.text()) - 30  # algun rango a barrer
-        z_end = float(self.zLabel.text()) + 30
+        Npasos = 128  # El mismo Npasos de gotomax # TODO: algun numero de pasos a definir (50 dice en algun lado)
+        z_start = float(self.zLabel.text()) - 15  # algun rango a barrer en um
+        z_end = float(self.zLabel.text()) + 15
         if z_start < 0:
             z_start = 0
         if z_end > 200:
@@ -1954,9 +1972,7 @@ class ScanWidget(QtGui.QFrame):
         z_antes = float(self.zLabel.text())  # guardo donde estaba
         self.z_vector = self.z_vector_create()
 
-    # TODO: averiguar que hace y/o cuanto tarda labview
-
-        self.z_profile = self.focus__rampas(self.z_vector)
+        self.z_profile, self.z_profilevuelta = self.focus__rampas(self.z_vector)
 #        self.z_profile = z_profiles[PD_channels[color]]
         self.locked_focus = True
 
@@ -1987,7 +2003,7 @@ class ScanWidget(QtGui.QFrame):
         nciclos=1
         pi_device.WGC(3, nciclos)
 
-        pi_device.WOS(3,0)  # aditional offset = 0
+        pi_device.WOS(3,z_vector[0])  # aditional offset needed
 
         Nspeed = np.ceil(int(Npasos / 10))
         Npoints = int((Npasos + (Nspeed*2))*2)
@@ -2040,34 +2056,22 @@ class ScanWidget(QtGui.QFrame):
         if self.locked_focus:
             tiempo_autocorr_tic = ptime.time()
 
-            Npasos = len(self.z_vector)
-            Ncorrelations = 6  # TODO: a definir.... 50?  # quizas no
-            new_profileida = np.zeros((Ncorrelations, Npasos))
-            new_profilevuelta = np.zeros((Ncorrelations, Npasos))
-            z_vector_corr = np.zeros((Ncorrelations, Npasos))
-            correlations = np.zeros((Npasos))
-            maxcorr = np.zeros(Ncorrelations)
-            meancorr = np.zeros(Ncorrelations)
             z_profile_lock = self.z_profile
 
-            for j in range(Ncorrelations):
-                z_vector_corr[j, :] = self.z_vector - (Ncorrelations/2) + j
-                new_profileida[j,:], new_profilevuelta[j,:] = self.focus__rampas(z_vector_corr[j,:])
-                correlations[:] = np.correlate(new_profileida[j,:],
-                                               z_profile_lock, "same")
-                maxcorr[j] = np.max(correlations)
-                meancorr[j] = np.mean(correlations)
-            print(maxcorr, meancorr, "maximo y medio Corr")
-            j_final = (np.where(maxcorr == np.max(maxcorr))[0][0])
-            z_max = np.max(new_profileida[j_final, :])
-            donde_z_max = np.where(new_profileida[j_final, :] == z_max)
+            new_profileida, new_profilevuelta = self.focus__rampas(self.z_vector)
+            correlation = np.correlate(new_profileida, z_profile_lock, "same")
+            indicemax = np.argmax(correlation)
 
-            self.move_z(z_vector_corr[j_final, donde_z_max])
+            self.move_z(self.z_vector[indicemax])
 
             tiempo_autocorr_toc = ptime.time()
             print("tiempo_autocorr_toc", tiempo_autocorr_toc-tiempo_autocorr_tic)
 
         else:
+            QtGui.QMessageBox.question(self,
+                                       'Autocorrelacion',
+                                       'No esta lockeado el foco!',
+                                       QtGui.QMessageBox.Ok)
             print("¡¡No esta Lockeado el foco!!")
             self.focus_lock_button.setStyleSheet(
                     "QPushButton { background-color: red; }"
@@ -2131,6 +2135,13 @@ class ScanWidget(QtGui.QFrame):
             QComboBox.setStyleSheet("QComboBox{color: rgb(100,0,0);}\n")
             
 # %% Point scan , que ahora es traza
+            
+    def doit(self):
+        print("Opening a new popup window...")
+        self.w = Trace.MyPopup_traza(self.main, self)
+        #self.w = MyPopup_traza(self.main, self)
+        self.w.setGeometry(QtCore.QRect(750, 50, 450, 600))
+        self.w.show()
 
     def traza_start(self):
         self.done()
@@ -2141,8 +2152,3 @@ class ScanWidget(QtGui.QFrame):
         self.w.pointtimer.stop()
         print("fin traza")
 
-    def doit(self):
-        print("Opening a new popup window...")
-        self.w = MyPopup_traza(self.main, self)
-        self.w.setGeometry(QtCore.QRect(750, 50, 450, 600))
-        self.w.show()

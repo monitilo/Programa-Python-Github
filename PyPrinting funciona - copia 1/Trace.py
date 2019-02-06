@@ -4,10 +4,9 @@ import pyqtgraph as pg
 import pyqtgraph.ptime as ptime
 import time
 import numpy as np
-from HelpMeJesus import aPythonDeveloper
 from Placa import *
 #shutters = Placa.shutters
-from ScanWidgetjunto import ScanWidget
+import ScanWidgetjunto
 
 class MyPopup_traza(QtGui.QWidget):
     """ new class to create a new window for the trace menu"""
@@ -16,12 +15,11 @@ class MyPopup_traza(QtGui.QWidget):
         self.stop()
         print("Paró y cerró la traza")
 
-    def __init__(self, main, buttons, scanbuttons):
+    def __init__(self, main, buttons):
         QtGui.QWidget.__init__(self)
         super().__init__()
         self.main = main
         self.ScanWidget = buttons  
-        self.ScanWidget = scanbuttons
         self.traza_Widget2 = pg.GraphicsLayoutWidget()
         self.running = False
         grid = QtGui.QGridLayout()
@@ -105,12 +103,12 @@ class MyPopup_traza(QtGui.QWidget):
                 self.PointScan()
         else:
             print("pause")
-            self.ScannerWidget.closeShutter(self.traza_shutterabierto)
+            self.ScanWidget.closeShutter(self.traza_shutterabierto)
             self.pointtimer.stop()
 
     def stop(self):
         print("stop")
-        self.ScannerWidget.closeShutter(self.traza_shutterabierto)
+        self.ScanWidget.closeShutter(self.traza_shutterabierto)
         try:
             self.pointtimer.stop()
         except IOError as e:
@@ -126,8 +124,8 @@ class MyPopup_traza(QtGui.QWidget):
     def traza_openshutter(self):
         """ abre el shutter que se va a utilizar para imprimir"""
         for i in range(len(shutters)):
-            if self.ScannerWidget.traza_laser.currentText() == shutters[i]:
-                self.ScannerWidget.openShutter(shutters[i])
+            if self.ScanWidget.traza_laser.currentText() == shutters[i]:
+                self.ScanWidget.openShutter(shutters[i])
                 self.traza_shutterabierto = shutters[i]
 
     def save_traza(self, imprimiendo=False):
@@ -137,7 +135,7 @@ class MyPopup_traza(QtGui.QWidget):
             filepath = self.main.file_path
             timestr = time.strftime("%d%m%Y-%H%M%S")
             if imprimiendo:  # si viene de la rutina, guarda automatico con el numero de particula
-                timestr = str("Particula-") + str(self.ScannerWidget.i_global)
+                timestr = str("Particula-") + str(self.ScanWidget.i_global)
                 self.ScanWidget.edit_save.setText(str(timestr))
             name = str(filepath + "/" + timestr + "-Traza" + ".txt")
             print("va a abrir el name")

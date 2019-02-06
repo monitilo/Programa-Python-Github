@@ -7,7 +7,6 @@ from pyqtgraph.Qt import QtGui
 import time
 #import Placa
 from Placa import *
-print("aa")
 from ScanWidgetjunto import ScanWidget
 
 import ScanWidgetjunto

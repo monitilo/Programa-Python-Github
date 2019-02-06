@@ -1,42 +1,40 @@
 ﻿# %% Library
 
-import os
-import tkinter as tk
-from tkinter import filedialog
+#import os
+#import tkinter as tk
+#from tkinter import filedialog
 
-import numpy as np
-import time
+#import numpy as np
+#import time
 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-import pyqtgraph as pg
+#import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtGui
-import pyqtgraph.ptime as ptime
-from pyqtgraph.dockarea import Dock, DockArea
+#import pyqtgraph.ptime as ptime
+#from pyqtgraph.dockarea import Dock, DockArea
 
-from PIL import Image
+#from PIL import Image
 
-from scipy import ndimage
-from scipy import optimize
+#from scipy import ndimage
+#from scipy import optimize
 
-import re
+#import re
 
-import nidaqmx
-from pipython import GCSDevice
+#import nidaqmx
+#from pipython import GCSDevice
 
 # %% Connection
 
 #import Placa
 from Placa import *
 
-
 print(device)
-
 # %% Main Interface
 
 import MainWindow
 
-# %% Interface Buttons
+# %% botones y scaneo
 import ScanWidgetjunto
 
 #problema: como separar la clase ScanWidget
